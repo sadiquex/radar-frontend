@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhoneFrame } from "./components/PhoneFrame";
 import { Landing, Create, Share, memberFromParticipant, type Member } from "./components/Radar";
-import { data } from "@/lib/data";
-import { getClientId } from "@/lib/clientId";
+import { data, getIdentity } from "@/lib/data";
+import { serverNow } from "@/lib/serverTime";
 import type { Trip } from "@/lib/types";
 
 type Step = "landing" | "create" | "share";
@@ -16,6 +16,7 @@ export default function Home() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   // Only claim we'll hold the screen awake if this browser can actually do it.
   const [wakeSupported, setWakeSupported] = useState(false);
 
@@ -26,28 +27,49 @@ export default function Home() {
   // While on the Share screen, show people joining live.
   useEffect(() => {
     if (step !== "share" || !trip) return;
-    const clientId = getClientId();
-    const refresh = () =>
-      setMembers(
-        data.listParticipants(trip.id).map((p, i) =>
-          memberFromParticipant(p, clientId, Date.now(), i)
-        )
-      );
-    refresh();
-    return data.subscribe(trip.id, refresh);
+    let cancelled = false;
+
+    const refresh = async () => {
+      try {
+        const [me, participants] = await Promise.all([
+          getIdentity(),
+          data.listParticipants(trip.id),
+        ]);
+        if (cancelled) return;
+        setMembers(
+          participants.map((p, i) => memberFromParticipant(p, me, serverNow(), i))
+        );
+      } catch {
+        // The share code is already on screen and the trip exists; a failed
+        // poll gives the creator nothing to act on.
+      }
+    };
+
+    void refresh();
+    const unsub = data.subscribe(trip.id, () => void refresh());
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, [step, trip]);
 
-  const handleCreate = (input: {
+  const handleCreate = async (input: {
     name?: string;
     destinationName?: string;
     destinationLat?: number;
     destinationLng?: number;
   }) => {
     setBusy(true);
-    const created = data.createTrip(input, getClientId());
-    setTrip(created);
-    setBusy(false);
-    setStep("share");
+    setError(null);
+    try {
+      const created = await data.createTrip(input, await getIdentity());
+      setTrip(created);
+      setStep("share");
+    } catch {
+      setError("Couldn't start the trip. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const shareUrl =
@@ -61,9 +83,10 @@ export default function Home() {
       {step === "create" && (
         <Create
           onBack={() => setStep("landing")}
-          onCreate={handleCreate}
+          onCreate={(input) => void handleCreate(input)}
           busy={busy}
           wakeSupported={wakeSupported}
+          error={error}
         />
       )}
       {step === "share" && trip && (

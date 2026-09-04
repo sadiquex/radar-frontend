@@ -9,8 +9,8 @@ import {
 } from "../../components/Radar";
 import { useGeolocation } from "../../hooks/useGeolocation";
 import { useWakeLock } from "../../hooks/useWakeLock";
-import { data } from "@/lib/data";
-import { getClientId } from "@/lib/clientId";
+import { data, getIdentity } from "@/lib/data";
+import { serverNow } from "@/lib/serverTime";
 import { computeStatuses } from "@/lib/status";
 import { computeVerdict } from "@/lib/verdict";
 import { diffStatuses } from "@/lib/notify";
@@ -21,7 +21,7 @@ import { PRODUCT_NAME } from "@/lib/brand";
 import type { Participant, StatusKey, Trip } from "@/lib/types";
 
 type View = { kind: "group" } | { kind: "member"; id: string } | { kind: "map" } | { kind: "glance" };
-type Load = "loading" | "ready" | "ended";
+type Load = "loading" | "ready" | "ended" | "unreachable";
 
 export default function GroupPage() {
   const { code } = useParams<{ code: string }>();
@@ -34,7 +34,10 @@ export default function GroupPage() {
   const [load, setLoad] = useState<Load>("loading");
   const [view, setView] = useState<View>({ kind: "group" });
   const [toast, setToast] = useState<{ text: string; status: StatusKey | null } | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  // Server time, not this device's: every timestamp we compare against now
+  // comes from the API, so a phone with a fast clock would otherwise decide
+  // the whole group had been stationary for five minutes.
+  const [now, setNow] = useState(() => serverNow());
   const [demoOn, setDemoOn] = useState(false);
   const [notifsOn, setNotifsOn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -58,6 +61,13 @@ export default function GroupPage() {
     tripId: trip?.id ?? null,
     participantId: clientId,
     enabled: load === "ready",
+    // Locally a write could never be refused, so nothing caught it. Over a
+    // network the trip can end under us mid-drive, and an unhandled rejection
+    // inside watchPosition would just repeat on every fix.
+    onTripUnavailable: () => {
+      setTrip(null);
+      setLoad("ended");
+    },
   });
 
   // Glance mode forces the lock on: it exists to be stared at from a bar mount.
@@ -89,45 +99,72 @@ export default function GroupPage() {
   }, [themeChoice]);
 
   useEffect(() => {
-    const id = getClientId();
-    setClientId(id);
+    let cancelled = false;
+    let unsub = () => {};
 
-    const found = data.getTripByCode(code);
-    if (!found) {
-      setLoad("ended");
-      return;
-    }
-    // You must be a participant to view the group — sends creator + link visitors
-    // through the name step exactly once.
-    const isMember = data.listParticipants(found.id).some((p) => p.id === id);
-    if (!isMember) {
-      router.replace(`/t/${found.shareCode}/join`);
-      return;
-    }
+    void (async () => {
+      try {
+        const id = await getIdentity();
+        if (cancelled) return;
+        setClientId(id);
 
-    const refresh = () => {
-      const live = data.getTripById(found.id); // re-check liveness (expiry / ended elsewhere)
-      if (!live) {
-        setTrip(null);
-        setLoad("ended");
-        return;
+        const found = await data.getTripByCode(code);
+        if (cancelled) return;
+        if (!found) {
+          setLoad("ended");
+          return;
+        }
+
+        // You must be a participant to view the group — sends creator + link
+        // visitors through the name step exactly once.
+        const roster = await data.listParticipants(found.id);
+        if (cancelled) return;
+        if (!roster.some((p) => p.id === id)) {
+          router.replace(`/t/${found.shareCode}/join`);
+          return;
+        }
+
+        const refresh = async () => {
+          try {
+            // Re-check liveness (expiry, or ended on another device).
+            const live = await data.getTripById(found.id);
+            if (cancelled) return;
+            if (!live) {
+              setTrip(null);
+              setLoad("ended");
+              return;
+            }
+            const list = await data.listParticipants(found.id);
+            if (cancelled) return;
+            setParticipants(list);
+          } catch {
+            // Mid-trip connectivity comes and goes. Hold the last known
+            // positions rather than blanking the screen someone is riding by.
+          }
+        };
+
+        setTrip(found);
+        setParticipants(roster);
+        setLoad("ready");
+        unsub = data.subscribe(found.id, () => {
+          if (!leaving.current) void refresh();
+        });
+      } catch {
+        // Reaching the trip failed for a reason that is not "it is over".
+        if (!cancelled) setLoad("unreachable");
       }
-      setParticipants(data.listParticipants(found.id));
-    };
+    })();
 
-    setTrip(found);
-    setLoad("ready");
-    refresh();
-    const unsub = data.subscribe(found.id, () => {
-      if (!leaving.current) refresh();
-    });
-    return unsub;
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, [code, router]);
 
   // Tick so time-based status (stopped, last-seen) stays fresh without new positions.
   useEffect(() => {
     if (load !== "ready") return;
-    const t = setInterval(() => setNow(Date.now()), 15_000);
+    const t = setInterval(() => setNow(serverNow()), 15_000);
     return () => clearInterval(t);
   }, [load]);
 
@@ -210,6 +247,31 @@ export default function GroupPage() {
     );
   }
 
+  if (load === "unreachable") {
+    return (
+      <PhoneFrame>
+        <div className="flex flex-col h-full items-center justify-center px-8 text-center gap-3">
+          <div style={{ fontFamily: FONT.display, fontSize: 22, color: C.text }}>
+            Can&rsquo;t reach this trip
+          </div>
+          <div style={{ fontFamily: FONT.body, fontSize: 14, color: C.muted }}>
+            You may be offline. The trip is probably still running.
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-6 rounded-2xl"
+            style={{
+              background: C.text, color: C.ground,
+              fontFamily: FONT.body, fontWeight: 600, minHeight: 52,
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      </PhoneFrame>
+    );
+  }
+
   if (load === "ended" || !trip) {
     return (
       <PhoneFrame>
@@ -270,17 +332,31 @@ export default function GroupPage() {
     flash("Demo convoy added");
   };
 
-  const leave = () => {
+  const leave = async () => {
     leaving.current = true;
     stopDemo.current();
-    data.leaveTrip(trip.id, clientId);
+    // Navigate regardless: the row is removed on a best-effort basis, and an
+    // 8-hour expiry cleans up anything a lost connection leaves behind.
+    try {
+      await data.leaveTrip(trip.id, clientId);
+    } catch {
+      /* nothing the leaver can do about it */
+    }
     router.push("/");
   };
 
-  const end = () => {
+  const end = async () => {
     leaving.current = true;
     stopDemo.current();
-    data.endTrip(trip.id);
+    try {
+      await data.endTrip(trip.id);
+    } catch {
+      // Ending is the one action with consequences for everyone else, so a
+      // failure has to be visible rather than faked.
+      leaving.current = false;
+      flash("Couldn't end the trip. Check your connection.");
+      return;
+    }
     setTrip(null);
     setLoad("ended");
   };
@@ -363,8 +439,8 @@ export default function GroupPage() {
         onGlance={() => { setMenuOpen(false); setView({ kind: "glance" }); }}
         onInvite={invite}
         onStartDemo={startDemo}
-        onLeave={leave}
-        onEnd={end}
+        onLeave={() => void leave()}
+        onEnd={() => void end()}
       />
     </PhoneFrame>
   );

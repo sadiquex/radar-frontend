@@ -50,10 +50,12 @@ describe("contract.json conformance", () => {
   });
 
   it("ignores movement below the shared threshold when stamping lastMovedAt", () => {
-    // Behavioural pin on MOVED_THRESHOLD_M, which is module-private.
-    // A fix just under the threshold must leave lastMovedAt alone; one just
-    // over must advance it. Both halves matter — a rule that never fires and
-    // a rule that always fires are equally broken.
+    // Behavioural pin on MOVED_THRESHOLD_M, which is module-private. Both
+    // halves matter: a rule that never fires and one that always fires are
+    // equally broken. Each half needs its own participant, because
+    // updatePosition always stores the new coordinates — so the threshold is
+    // measured against the *last fix*, not the original one, and jitter
+    // accumulates in the baseline.
     let clock = 1_000_000;
     const data = createLocalData({
       storage: store(),
@@ -62,27 +64,28 @@ describe("contract.json conformance", () => {
       now: () => clock,
     });
     const trip = data.createTrip({}, "c");
-    data.joinTrip(trip.id, "p1", "Ama");
+    data.joinTrip(trip.id, "still", "Still");
+    data.joinTrip(trip.id, "moving", "Moving");
 
-    const first = data.updatePosition(trip.id, "p1", ACCRA);
-    const stampedAt = first.lastMovedAt;
+    const degreesFor = (metres: number) => metres / 111_195;
+    const stillAt = data.updatePosition(trip.id, "still", ACCRA).lastMovedAt;
+    const movingAt = data.updatePosition(trip.id, "moving", ACCRA).lastMovedAt;
 
-    // A shade under the threshold: ~19.9m.
-    const under = contract.movedThresholdM - 0.1;
     clock += 60_000;
-    const jittered = data.updatePosition(trip.id, "p1", {
-      lat: ACCRA.lat + under / 111_195,
+
+    // A shade under the threshold: lastMovedAt must not move.
+    const jittered = data.updatePosition(trip.id, "still", {
+      lat: ACCRA.lat + degreesFor(contract.movedThresholdM - 0.1),
       lng: ACCRA.lng,
     });
-    expect(jittered.lastMovedAt).toBe(stampedAt);
+    expect(jittered.lastMovedAt).toBe(stillAt);
 
-    // A shade over: ~20.1m.
-    const over = contract.movedThresholdM + 0.1;
-    clock += 60_000;
-    const moved = data.updatePosition(trip.id, "p1", {
-      lat: ACCRA.lat + over / 111_195,
+    // A shade over: lastMovedAt must advance to now.
+    const moved = data.updatePosition(trip.id, "moving", {
+      lat: ACCRA.lat + degreesFor(contract.movedThresholdM + 0.1),
       lng: ACCRA.lng,
     });
+    expect(moved.lastMovedAt).not.toBe(movingAt);
     expect(moved.lastMovedAt).toBe(clock);
   });
 

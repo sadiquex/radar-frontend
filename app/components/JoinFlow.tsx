@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { PhoneFrame } from "./PhoneFrame";
 import { Join, C, FONT } from "./Radar";
 import { SHARE_CODE_ALPHABET } from "@/lib/shareCode";
-import { data } from "@/lib/data";
-import { getClientId } from "@/lib/clientId";
+import { data, getIdentity, ApiError } from "@/lib/data";
 import type { Trip } from "@/lib/types";
 
 // Drives both link joins (/t/[code]/join, code prefilled) and manual joins (/join).
@@ -19,22 +18,42 @@ export function JoinFlow({ initialCode }: { initialCode?: string }) {
 
   useEffect(() => {
     if (!initialCode) return;
-    const found = data.getTripByCode(initialCode);
-    if (found) setTrip(found);
-    else setNotFound(true);
+    let cancelled = false;
+    data
+      .getTripByCode(initialCode)
+      .then((found) => {
+        if (cancelled) return;
+        if (found) setTrip(found);
+        else setNotFound(true);
+      })
+      .catch(() => {
+        // A lookup that fails for some other reason is not a dead link, and
+        // saying so would send people away from a trip that is running.
+        if (!cancelled) setError("Couldn't reach that trip. Check your connection.");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [initialCode]);
 
-  const handleJoin = ({ code, name }: { code: string; name: string }) => {
+  const handleJoin = async ({ code, name }: { code: string; name: string }) => {
     setBusy(true);
     setError(null);
-    const target = trip ?? data.getTripByCode(code);
-    if (!target) {
-      setError("That code isn't an active trip.");
+    try {
+      const target = trip ?? (await data.getTripByCode(code));
+      if (!target) {
+        setError("That code isn't an active trip.");
+        setBusy(false);
+        return;
+      }
+      await data.joinTrip(target.id, await getIdentity(), name);
+      // Deliberately staying busy across the navigation, so the button cannot
+      // be pressed a second time while the group screen mounts.
+      router.push(`/t/${target.shareCode}`);
+    } catch (err) {
+      setError(joinErrorMessage(err));
       setBusy(false);
-      return;
     }
-    data.joinTrip(target.id, getClientId(), name);
-    router.push(`/t/${target.shareCode}`);
   };
 
   if (notFound) {
@@ -64,10 +83,25 @@ export function JoinFlow({ initialCode }: { initialCode?: string }) {
         prefilledCode={trip?.shareCode ?? ""}
         tripName={trip?.name}
         onBack={() => router.push("/")}
-        onJoin={handleJoin}
+        onJoin={(input) => void handleJoin(input)}
         busy={busy}
         error={error}
       />
     </PhoneFrame>
   );
+}
+
+function joinErrorMessage(err: unknown): string {
+  if (!(err instanceof ApiError)) return "Couldn't join that trip. Try again.";
+  switch (err.code) {
+    case "trip_full":
+      return "This trip is full.";
+    case "ended":
+    case "expired":
+      return "That trip has already ended.";
+    case "offline":
+      return "You appear to be offline.";
+    default:
+      return "Couldn't join that trip. Try again.";
+  }
 }

@@ -454,7 +454,7 @@ export const Landing = ({ onStart, onJoin }: { onStart: () => void; onJoin: () =
 
 // ─── Screen: Create ─────────────────────────────────────────────────────────
 export const Create = ({
-  onBack, onCreate, busy = false, wakeSupported = false,
+  onBack, onCreate, busy = false, wakeSupported = false, error,
 }: {
   onBack: () => void;
   onCreate: (input: {
@@ -465,6 +465,9 @@ export const Create = ({
   }) => void;
   busy?: boolean;
   wakeSupported?: boolean;
+  /** Set when creating the trip failed — a backend request can, unlike a
+   *  localStorage write, so the button must be able to explain itself. */
+  error?: string | null;
 }) => {
   const [dest, setDest] = useState("");
   const [name, setName] = useState("");
@@ -564,6 +567,16 @@ export const Create = ({
       </div>
 
       <div className="px-6" style={{ paddingTop: 12, paddingBottom: PAD_B }}>
+        {error && (
+          <div
+            className="flex items-start gap-2"
+            style={{ fontFamily: FONT.body, fontSize: 14, color: C.stopped, marginBottom: 14 }}
+            role="alert"
+          >
+            <AlertTriangle size={16} style={{ marginTop: 2, flexShrink: 0 }} />
+            {error}
+          </div>
+        )}
         <PrimaryButton
           disabled={busy}
           onClick={() =>
@@ -737,6 +750,14 @@ export const Join = ({
   const [name, setName] = useState("");
   const codeLocked = prefilledCode.length > 0;
   const step = !code ? 0 : !name ? 1 : 2;
+
+  // The trip is looked up in an effect, so on the first render prefilledCode is
+  // still "" and useState captures that. Without this, arriving by link left
+  // the code field empty *and* locked — the join button stayed on "Enter a
+  // code" with no way to type one, which dead-ends every shared link.
+  useEffect(() => {
+    if (prefilledCode) setCode(prefilledCode);
+  }, [prefilledCode]);
 
   // The share alphabet excludes 0/O/1/I on purpose, so anything outside it is
   // a typo. Filtering as they type beats failing after submit.
