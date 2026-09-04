@@ -5,6 +5,7 @@ import { createSessionStore, type Session } from "../session";
 import { getClientId } from "../clientId";
 import { generateShareCode } from "../shareCode";
 import { recordServerTime, serverNow, clockOffsetMs } from "../serverTime";
+import { createRealtime } from "../realtime";
 import type { DataClient } from "./types";
 import type { StorageLike } from "./local";
 
@@ -43,6 +44,9 @@ function createApiClient(baseUrl: string): { data: DataClient; identity: () => P
     baseUrl,
     session,
     clock: { now: serverNow, record: recordServerTime, offsetMs: clockOffsetMs },
+    // Live updates over a WebSocket, with the poll kept as a fallback for
+    // networks that block them.
+    realtime: createRealtime({ baseUrl, session }),
   });
 
   return {

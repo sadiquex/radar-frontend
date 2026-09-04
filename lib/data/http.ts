@@ -3,6 +3,7 @@ import type { Session } from "../session";
 import type { Clock } from "../serverTime";
 import { ApiError, type ApiErrorCode, type DataClient } from "./types";
 import { normalizeShareCode } from "../shareCode";
+import type { Realtime } from "../realtime";
 
 // Only the scripted demo convoy legitimately writes as someone other than the
 // caller. Any other id reaching those paths is a bug worth failing loudly on.
@@ -12,9 +13,9 @@ const DEMO_ID = /^demo-[a-z]{1,12}$/;
 // longer than a tick or two risks serving a stale join.
 const STATE_COALESCE_MS = 400;
 
-// Poll cadence while a screen is subscribed. Replaced by a WebSocket in the
-// next phase; positions only change every 20-30s, so this is not the
-// bottleneck it looks like.
+// Fallback cadence, used only while the live socket is down. Some networks
+// and proxies block WebSockets outright, in which case this simply never
+// stops — the group keeps updating, a few seconds behind.
 const POLL_MS = 4_000;
 
 interface StatePayload {
@@ -35,6 +36,8 @@ export interface HttpDataDeps {
   session: SessionLike;
   fetchFn?: typeof fetch;
   clock: Clock;
+  /** Omitted in tests that only exercise the request layer. */
+  realtime?: Realtime;
 }
 
 const ERROR_CODES: readonly ApiErrorCode[] = [
@@ -58,7 +61,7 @@ function asErrorCode(value: unknown, status: number): ApiErrorCode {
 }
 
 export function createHttpData(deps: HttpDataDeps): DataClient {
-  const { baseUrl, session, clock } = deps;
+  const { baseUrl, session, clock, realtime } = deps;
   const doFetch = deps.fetchFn ?? globalThis.fetch;
 
   // In-flight (and briefly settled) /state reads, keyed by trip.
@@ -241,15 +244,24 @@ export function createHttpData(deps: HttpDataDeps): DataClient {
     subscribe(tripId: string, onChange: () => void): () => void {
       let stopped = false;
       let last: string | null = null;
+      let pollHandle: ReturnType<typeof setInterval> | null = null;
 
-      // Our own writes announce themselves (see `changed`), which is what the
-      // local store does and what screens are written against.
+      // This tab's own writes announce themselves (see `changed`), which is
+      // what the local store does and what the screens are written against.
       const set = listeners.get(tripId) ?? new Set<() => void>();
       set.add(onChange);
       listeners.set(tripId, set);
 
-      // Polling covers only what happens on other devices. Until Phase C
-      // replaces this with a socket, 4s is fine: positions change every 20-30s.
+      const notify = () => {
+        if (stopped) return;
+        // The socket only says "something changed", so drop the cached read
+        // before the screen goes looking.
+        invalidate(tripId);
+        onChange();
+      };
+
+      // Fallback path. Compares a signature rather than notifying blindly, so
+      // an idle trip does not re-render every few seconds.
       const poll = async () => {
         if (stopped) return;
         let next: string;
@@ -268,11 +280,35 @@ export function createHttpData(deps: HttpDataDeps): DataClient {
         last = next;
       };
 
-      const handle = setInterval(() => void poll(), POLL_MS);
+      const startPolling = () => {
+        if (stopped || pollHandle !== null) return;
+        pollHandle = setInterval(() => void poll(), POLL_MS);
+      };
+      const stopPolling = () => {
+        if (pollHandle !== null) clearInterval(pollHandle);
+        pollHandle = null;
+        // Forget the baseline: the next fallback stretch re-establishes one
+        // rather than comparing against state from before the outage.
+        last = null;
+      };
+
+      // Poll from the outset and keep polling until the socket proves itself.
+      // A network that blocks WebSockets therefore degrades instead of going
+      // silent, with no special case for it anywhere.
+      startPolling();
+
+      const unwatch =
+        realtime === undefined
+          ? () => {}
+          : realtime.watch(tripId, {
+              onChange: notify,
+              onHealth: (up) => (up ? stopPolling() : startPolling()),
+            });
 
       return () => {
         stopped = true;
-        clearInterval(handle);
+        stopPolling();
+        unwatch();
         const current = listeners.get(tripId);
         current?.delete(onChange);
         if (current !== undefined && current.size === 0) listeners.delete(tripId);

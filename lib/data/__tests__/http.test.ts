@@ -334,6 +334,130 @@ describe("createHttpData — one request for the refresh path", () => {
   });
 });
 
+describe("createHttpData — subscribe with a live socket", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** A stand-in for lib/realtime, so the wiring can be driven by hand. */
+  function fakeRealtime() {
+    const watches: Array<{
+      tripId: string;
+      handlers: { onChange: () => void; onHealth: (up: boolean) => void };
+      stopped: boolean;
+    }> = [];
+    const realtime = {
+      watch(tripId: string, handlers: any) {
+        const entry = { tripId, handlers, stopped: false };
+        watches.push(entry);
+        return () => {
+          entry.stopped = true;
+        };
+      },
+    };
+    return { realtime, watches };
+  }
+
+  function clientWithSocket(replies: Array<[number, unknown]>) {
+    const { fetchFn, calls } = stubFetch(replies);
+    const { realtime, watches } = fakeRealtime();
+    const data = createHttpData({
+      baseUrl: "https://api.test",
+      session: { get: async () => SESSION, peek: () => SESSION, clear: () => {} },
+      fetchFn: fetchFn as unknown as typeof fetch,
+      clock: createClock(() => 1_000_000),
+      realtime: realtime as any,
+    });
+    return { data, calls, fetchFn, watches };
+  }
+
+  it("watches the trip's socket", async () => {
+    const { data, watches } = clientWithSocket([]);
+    const stop = data.subscribe(TRIP_ID, vi.fn());
+    expect(watches).toHaveLength(1);
+    expect(watches[0].tripId).toBe(TRIP_ID);
+    stop();
+  });
+
+  it("notifies on a socket change, with a fresh read", async () => {
+    const { data, watches, fetchFn } = clientWithSocket([
+      [200, withNow({ trip: trip(), participants: [participant()] })],
+      [200, withNow({ trip: trip(), participants: [participant()] })],
+    ]);
+    const onChange = vi.fn();
+    const stop = data.subscribe(TRIP_ID, onChange);
+
+    // Warm the cache, then let the socket report a change.
+    await data.listParticipants(TRIP_ID);
+    watches[0].handlers.onChange();
+    expect(onChange).toHaveBeenCalledTimes(1);
+
+    // The cached read must have been dropped, so the screen re-reads.
+    await data.listParticipants(TRIP_ID);
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
+  it("polls until the socket is up, then stops", async () => {
+    // Covers the case that matters most in the field: a network or proxy that
+    // blocks WebSockets entirely. Polling simply never stops.
+    const { data, fetchFn, watches } = clientWithSocket([
+      [200, withNow({ trip: trip(), participants: [] })],
+      [200, withNow({ trip: trip(), participants: [] })],
+      [200, withNow({ trip: trip(), participants: [] })],
+    ]);
+    const stop = data.subscribe(TRIP_ID, vi.fn());
+
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+
+    watches[0].handlers.onHealth(true);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(fetchFn).toHaveBeenCalledTimes(1); // no further polling
+    stop();
+  });
+
+  it("resumes polling when the socket drops, and stops again when it returns", async () => {
+    const { data, fetchFn, watches } = clientWithSocket(
+      Array.from({ length: 6 }, () => [200, withNow({ trip: trip(), participants: [] })] as [number, unknown])
+    );
+    const stop = data.subscribe(TRIP_ID, vi.fn());
+    watches[0].handlers.onHealth(true);
+    await vi.advanceTimersByTimeAsync(20_000);
+    const whileUp = fetchFn.mock.calls.length;
+
+    watches[0].handlers.onHealth(false);
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(fetchFn.mock.calls.length).toBeGreaterThan(whileUp);
+
+    const whileDown = fetchFn.mock.calls.length;
+    watches[0].handlers.onHealth(true);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(fetchFn.mock.calls.length).toBe(whileDown);
+    stop();
+  });
+
+  it("stops watching when the caller unsubscribes", async () => {
+    const { data, watches } = clientWithSocket([]);
+    const stop = data.subscribe(TRIP_ID, vi.fn());
+    stop();
+    expect(watches[0].stopped).toBe(true);
+  });
+
+  it("still notifies on this tab's own writes", async () => {
+    const { data, watches } = clientWithSocket([[201, withNow({ participant: participant() })]]);
+    const onChange = vi.fn();
+    const stop = data.subscribe(TRIP_ID, onChange);
+    await data.joinTrip(TRIP_ID, "dev-1", "Ama");
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(watches[0].stopped).toBe(false);
+    stop();
+  });
+});
+
 describe("createHttpData — subscribe", () => {
   beforeEach(() => {
     vi.useFakeTimers();
