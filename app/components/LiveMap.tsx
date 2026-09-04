@@ -33,7 +33,7 @@ const OSM_STYLE: StyleSpecification = {
 function pinEl(color: string, ink: string, label: string, ring: boolean): HTMLDivElement {
   const el = document.createElement("div");
   el.style.cssText = `width:34px;height:34px;border-radius:999px;background:${color};color:${ink};
-    display:grid;place-items:center;font:600 15px var(--font-bricolage),sans-serif;
+    display:grid;place-items:center;font:600 15px var(--font-display),sans-serif;
     box-shadow:0 2px 8px rgba(0,0,0,.35)${ring ? ",0 0 0 2px var(--c-text)" : ""};cursor:default;`;
   el.textContent = label;
   return el;

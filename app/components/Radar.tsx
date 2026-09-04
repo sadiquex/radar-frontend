@@ -85,10 +85,18 @@ export const C = {
 };
 
 export const FONT = {
-  display: "var(--font-bricolage)",
-  body: "var(--font-inter)",
+  display: "var(--font-display)",
+  body: "var(--font-body)",
+  // Small uppercase tracked labels only. DM Mono stops at 500 — asking it for
+  // 600+ gets a synthesised faux-bold.
   mono: "var(--font-mono)",
 };
+
+// Status glyphs are the accessibility channel for status, so they must not
+// depend on whichever webfont we happen to be using: ✓ ∴ ‖ › live at U+2713,
+// U+2234, U+2016 and U+203A, which text faces routinely omit. A system mono
+// always has them, and this decouples the a11y fallback from the type decision.
+const GLYPH_FONT = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
 // Safe-area composites. Mobile is the tuned case, so every screen edge goes
 // through one of these rather than a bare padding value.
@@ -146,7 +154,7 @@ const IconButton = ({
 const Glyph = ({ s, size = 12 }: { s: StatusKey; size?: number }) => (
   <span
     aria-hidden
-    style={{ fontFamily: FONT.mono, fontWeight: 700, fontSize: size, lineHeight: 1 }}
+    style={{ fontFamily: GLYPH_FONT, fontWeight: 600, fontSize: size, lineHeight: 1 }}
   >
     {STATUS[s].glyph}
   </span>
@@ -319,7 +327,7 @@ const Horizon = ({
               <div
                 className="tnum"
                 style={{
-                  fontFamily: FONT.mono, fontSize: 12, fontWeight: 500,
+                  fontFamily: FONT.display, fontSize: 12, fontWeight: 600,
                   color: C.muted, whiteSpace: "nowrap",
                   marginTop: rows[i] === 1 ? 20 : 4,
                 }}
@@ -367,7 +375,7 @@ const VerdictBlock = ({ verdict }: { verdict: Verdict }) => {
         <div className="flex items-baseline gap-2" style={{ marginTop: 6 }}>
           <span
             className="tnum"
-            style={{ fontFamily: FONT.mono, fontSize: 30, fontWeight: 700, color: tone, lineHeight: 1 }}
+            style={{ fontFamily: FONT.display, fontSize: 30, fontWeight: 700, color: tone, lineHeight: 1 }}
           >
             {verdict.metric}
           </span>
@@ -1002,7 +1010,7 @@ export const Group = ({
                     {m.kmLeft >= 0.5 && (
                       <span
                         className="tnum"
-                        style={{ fontFamily: FONT.mono, fontSize: 12, color: C.muted }}
+                        style={{ fontFamily: FONT.display, fontSize: 12, fontWeight: 600, color: C.muted }}
                       >
                         {m.kmLeft.toFixed(1)} km left
                       </span>
@@ -1393,7 +1401,7 @@ export const GlanceView = ({
             <div
               className="tnum"
               style={{
-                fontFamily: FONT.mono, fontSize: 88, lineHeight: 0.92,
+                fontFamily: FONT.display, fontSize: 88, lineHeight: 0.92,
                 letterSpacing: "-0.05em", color: tone, fontWeight: 700, marginTop: 10,
               }}
             >

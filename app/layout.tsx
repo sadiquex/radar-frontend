@@ -1,22 +1,38 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Inter, JetBrains_Mono } from "next/font/google";
+import { Archivo, Signika, DM_Mono } from "next/font/google";
 import { THEME_BOOTSTRAP } from "@/lib/theme";
 import "./globals.css";
 
-const bricolage = Bricolage_Grotesque({
+// Radar is an instrument you read at speed, so the type comes from transport
+// signage rather than from web apps: high x-height, open apertures, and forms
+// that stay distinct at an angle and in glare.
+//
+// Variables are named by ROLE, not by face. The previous --font-bricolage /
+// --font-inter names became lies the moment the faces changed.
+
+// Archivo — squarish, tightly fitted grotesque. Carries every headline and,
+// now, every numeral: tabular figures give column alignment in any face, so
+// the big numbers no longer need to sit in a code mono to line up.
+const display = Archivo({
   subsets: ["latin"],
-  variable: "--font-bricolage",
+  variable: "--font-display",
   display: "swap",
 });
 
-const inter = Inter({
+// Signika — drawn specifically for signage and wayfinding, with weight
+// adjustments that keep small text open. Reads at 13px in glare.
+const body = Signika({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-body",
   display: "swap",
 });
 
-const jetbrains = JetBrains_Mono({
+// DM Mono — reserved for small uppercase tracked labels, where a readout voice
+// earns its place. Not variable, and it stops at 500: nothing may ask it for a
+// heavier weight or the browser synthesises a smeared faux-bold.
+const mono = DM_Mono({
   subsets: ["latin"],
+  weight: ["400", "500"],
   variable: "--font-mono",
   display: "swap",
 });
@@ -51,7 +67,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bricolage.variable} ${inter.variable} ${jetbrains.variable}`}
+      className={`${display.variable} ${body.variable} ${mono.variable}`}
       suppressHydrationWarning
     >
       <head>
