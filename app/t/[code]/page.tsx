@@ -4,18 +4,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PhoneFrame } from "../../components/PhoneFrame";
 import {
-  Group, MemberView, MapView, Ended, Toast,
+  Group, MemberView, MapView, Ended, Toast, MenuSheet, GlanceView,
   memberFromParticipant, C, FONT, type Member,
-} from "../../components/GroupTrack";
+} from "../../components/Radar";
 import { useGeolocation } from "../../hooks/useGeolocation";
+import { useWakeLock } from "../../hooks/useWakeLock";
 import { data } from "@/lib/data";
 import { getClientId } from "@/lib/clientId";
 import { computeStatuses } from "@/lib/status";
+import { computeVerdict } from "@/lib/verdict";
 import { diffStatuses } from "@/lib/notify";
 import { startDemoConvoy } from "@/lib/demo";
+import { buzz, hapticsSupported } from "@/lib/haptics";
+import { normalizeChoice, resolveTheme, THEME_KEY, type ThemeChoice } from "@/lib/theme";
+import { PRODUCT_NAME } from "@/lib/brand";
 import type { Participant, StatusKey, Trip } from "@/lib/types";
 
-type View = { kind: "group" } | { kind: "member"; id: string } | { kind: "map" };
+type View = { kind: "group" } | { kind: "member"; id: string } | { kind: "map" } | { kind: "glance" };
 type Load = "loading" | "ready" | "ended";
 
 export default function GroupPage() {
@@ -28,16 +33,23 @@ export default function GroupPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [load, setLoad] = useState<Load>("loading");
   const [view, setView] = useState<View>({ kind: "group" });
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; status: StatusKey | null } | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [demoOn, setDemoOn] = useState(false);
   const [notifsOn, setNotifsOn] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [wantWake, setWantWake] = useState(true);
+  const [themeChoice, setThemeChoice] = useState<ThemeChoice>(() =>
+    typeof window === "undefined"
+      ? "system"
+      : normalizeChoice(window.localStorage.getItem(THEME_KEY))
+  );
   const leaving = useRef(false);
   const stopDemo = useRef<() => void>(() => {});
   const prevStatuses = useRef<Record<string, StatusKey> | null>(null);
 
-  const flash = useCallback((msg: string) => {
-    setToast(msg);
+  const flash = useCallback((text: string, status: StatusKey | null = null) => {
+    setToast({ text, status });
     window.setTimeout(() => setToast(null), 2600);
   }, []);
 
@@ -47,6 +59,34 @@ export default function GroupPage() {
     participantId: clientId,
     enabled: load === "ready",
   });
+
+  // Glance mode forces the lock on: it exists to be stared at from a bar mount.
+  const wake = useWakeLock(load === "ready" && (wantWake || view.kind === "glance"));
+
+  const changeTheme = useCallback((choice: ThemeChoice) => {
+    setThemeChoice(choice);
+    try {
+      if (choice === "system") window.localStorage.removeItem(THEME_KEY);
+      else window.localStorage.setItem(THEME_KEY, choice);
+    } catch { /* private mode — the choice still applies for this session */ }
+  }, []);
+
+  // Applies every choice, not just "system": an earlier version returned early
+  // for explicit choices and left the attribute wherever it happened to be.
+  // The media listener is only attached while actually following the system.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () =>
+      document.documentElement.setAttribute(
+        "data-theme",
+        resolveTheme(themeChoice === "system" ? null : themeChoice, mq.matches)
+      );
+    apply();
+    if (themeChoice !== "system") return;
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, [themeChoice]);
 
   useEffect(() => {
     const id = getClientId();
@@ -101,16 +141,35 @@ export default function GroupPage() {
     [trip?.destinationLat, trip?.destinationLng]
   );
 
-  const members: Member[] = useMemo(() => {
-    const statuses = computeStatuses(participants, destination, now);
-    return participants.map((p) => {
-      const base = memberFromParticipant(p, clientId, now);
-      const s = statuses[p.id];
-      return s ? { ...base, status: s.status, kmLeft: s.kmLeft } : base;
-    });
-  }, [participants, destination, now, clientId]);
+  const statuses = useMemo(
+    () => computeStatuses(participants, destination, now),
+    [participants, destination, now]
+  );
 
-  // Surface meaningful status changes — in-app toast always, system notification when opted in.
+  const members: Member[] = useMemo(
+    () =>
+      participants.map((p, i) => {
+        const base = memberFromParticipant(p, clientId, now, i);
+        const s = statuses[p.id];
+        return s ? { ...base, status: s.status, kmLeft: s.kmLeft } : base;
+      }),
+    [participants, statuses, now, clientId]
+  );
+
+  const verdict = useMemo(
+    () =>
+      computeVerdict({
+        participants,
+        statuses,
+        selfId: clientId,
+        destinationName: trip?.destinationName ?? null,
+        now,
+      }),
+    [participants, statuses, clientId, trip?.destinationName, now]
+  );
+
+  // Surface meaningful status changes — toast always, plus a buzz and a system
+  // notification when alerts are on. You can't read a toast mid-stride.
   useEffect(() => {
     if (load !== "ready") return;
     const located = members.filter((m) => m.located);
@@ -124,19 +183,27 @@ export default function GroupPage() {
     if (prev) {
       const msgs = diffStatuses(prev, cur, names);
       if (msgs.length) {
-        flash(msgs[0]);
-        if (notifsOn && typeof Notification !== "undefined" && Notification.permission === "granted") {
-          msgs.forEach((m) => new Notification("GroupTrack", { body: m }));
+        flash(msgs[0], verdict.status);
+        if (notifsOn) {
+          buzz(verdict.tone);
+          if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+            msgs.forEach((m) => new Notification(PRODUCT_NAME, { body: m }));
+          }
         }
       }
     }
     prevStatuses.current = cur;
+    // verdict is derived from members; including it would re-run on every tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members, load, notifsOn, flash]);
 
   if (load === "loading") {
     return (
       <PhoneFrame>
-        <div className="grid place-items-center h-full" style={{ fontFamily: FONT.body, color: C.muted }}>
+        <div
+          className="grid place-items-center h-full"
+          style={{ fontFamily: FONT.body, color: C.muted, fontSize: 15 }}
+        >
           Loading…
         </div>
       </PhoneFrame>
@@ -161,7 +228,9 @@ export default function GroupPage() {
       return;
     }
     if (typeof Notification === "undefined") {
-      flash("Notifications aren’t supported here");
+      // Haptics may still work even where notifications don't.
+      setNotifsOn(true);
+      flash(hapticsSupported() ? "Buzz alerts on" : "Alerts aren’t supported here");
       return;
     }
     const perm =
@@ -175,9 +244,10 @@ export default function GroupPage() {
   };
 
   const invite = async () => {
+    setMenuOpen(false);
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Join my trip on GroupTrack", url: joinUrl });
+        await navigator.share({ title: `Join my trip on ${PRODUCT_NAME}`, url: joinUrl });
         return;
       } catch {
         /* cancelled — fall through to copy */
@@ -192,6 +262,7 @@ export default function GroupPage() {
   };
 
   const startDemo = () => {
+    setMenuOpen(false);
     if (demoOn) return;
     const origin = geo.position ?? { lat: 5.6037, lng: -0.187 };
     stopDemo.current = startDemoConvoy({ tripId: trip.id, origin, destination });
@@ -225,24 +296,29 @@ export default function GroupPage() {
 
   return (
     <PhoneFrame>
-      {toast && <Toast text={toast} s="with" onClose={() => setToast(null)} />}
+      {toast && view.kind !== "glance" && (
+        <Toast
+          text={toast.text}
+          tone={verdict.tone}
+          status={toast.status}
+          onClose={() => setToast(null)}
+        />
+      )}
 
       {view.kind === "group" && (
         <Group
           tripName={trip.name}
           destinationName={trip.destinationName}
           members={members}
+          verdict={verdict}
           isCreator={isCreator}
           locationNotice={locationNotice}
           notifsOn={notifsOn}
           onToggleNotifs={toggleNotifs}
-          canDemo={!demoOn && members.length <= 1}
-          onStartDemo={startDemo}
+          onOpenMenu={() => setMenuOpen(true)}
           onSelectMember={(id) => setView({ kind: "member", id })}
           onOpenMap={() => setView({ kind: "map" })}
           onInvite={invite}
-          onLeave={leave}
-          onEnd={end}
         />
       )}
 
@@ -262,6 +338,34 @@ export default function GroupPage() {
           onBack={() => setView({ kind: "group" })}
         />
       )}
+
+      {view.kind === "glance" && (
+        <GlanceView
+          verdict={verdict}
+          members={members}
+          onExit={() => setView({ kind: "group" })}
+        />
+      )}
+
+      <MenuSheet
+        open={menuOpen}
+        isCreator={isCreator}
+        notifsOn={notifsOn}
+        hapticsSupported={hapticsSupported()}
+        wakeOn={wantWake}
+        wakeSupported={wake.supported}
+        themeChoice={themeChoice}
+        canDemo={!demoOn && members.length <= 1}
+        onClose={() => setMenuOpen(false)}
+        onToggleNotifs={toggleNotifs}
+        onToggleWake={() => setWantWake((v) => !v)}
+        onChangeTheme={changeTheme}
+        onGlance={() => { setMenuOpen(false); setView({ kind: "glance" }); }}
+        onInvite={invite}
+        onStartDemo={startDemo}
+        onLeave={leave}
+        onEnd={end}
+      />
     </PhoneFrame>
   );
 }

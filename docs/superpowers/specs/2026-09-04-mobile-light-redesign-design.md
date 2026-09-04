@@ -8,7 +8,7 @@
 
 ## 1. Why
 
-Caravan is used outdoors, on a phone, by people moving — running, riding, driving in convoy. The current build is a dark-only, desktop-framed prototype with three specific classes of defect:
+Radar is used outdoors, on a phone, by people moving — running, riding, driving in convoy. The current build is a dark-only, desktop-framed prototype with three specific classes of defect:
 
 **It is mis-measured for sunlight.** The theme is dark-only on `#0E1116`. In direct sun, the screen's emitted light is swamped by ambient light reflecting off the glass, which compresses every contrast ratio toward the reflectance of the cover glass. High ratios survive as low ones; low ratios vanish entirely. A dark theme is the worst possible starting point, and the palette cannot simply be inverted — measured on white, **every status colour fails WCAG AA**: ahead 2.34, behind 2.64, with-group 1.86, stopped 1.59, arrived 1.92. Separately, the existing dark `faint` token (`#5A5F68`) already fails on its own ground at 2.95 — and it is what the 9–10px labels use.
 
@@ -453,9 +453,11 @@ Not a schedule — just what genuinely blocks what, so the implementation plan c
 4. **Screens can then proceed independently**, since they share only tokens and the shell.
 5. **Behavioural additions are independent of all of the above** except glance mode, which needs the verdict. Wake lock, haptics and the cadence change touch a hook, a new module, and a pure function respectively, and can land in any order.
 
-## 18. Open question for review
+## 18. Naming — resolved
 
-**User-visible naming.** The README was renamed to Caravan (commit `ba3686c`) but that commit changed one line and nothing else: `package.json`, `metadata.title`, the notification title, the Landing wordmark and the `gt:` storage prefixes all still say GroupTrack. Since this redesign rewrites the Landing wordmark and the metadata anyway, my assumption is: **user-visible copy becomes "Caravan"; storage keys, the `GroupTrack.tsx` filename and the package name are left alone** (per `CLAUDE.md`, the `gt:` prefixes are load-bearing — `subscribe` string-matches them, so renaming orphans live trips). Say if you'd rather it stayed GroupTrack throughout, or went all the way.
+The product is **Radar**, decided during implementation. Every user-visible mention reads from `PRODUCT_NAME` in `lib/brand.ts`; `GroupTrack.tsx` was renamed to `Radar.tsx` and the package name to `radar`.
+
+The `gt:` storage prefixes and `grouptrack:clientId` were deliberately left alone: `data.subscribe` string-matches those keys, so renaming a prefix would break cross-tab sync and orphan every trip already live in a browser, for no user-visible benefit. Same for the `gtpulse`/`gtrise` CSS animation names.
 
 ## 19. Follow-ups, explicitly not in this work
 

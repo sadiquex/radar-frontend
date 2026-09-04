@@ -9,6 +9,8 @@ export interface MapMarker {
   lat: number;
   lng: number;
   color: string;
+  /** Text colour for the initial — avatar fills differ per theme. */
+  ink: string;
   label: string;
   you?: boolean;
 }
@@ -28,21 +30,21 @@ const OSM_STYLE: StyleSpecification = {
   layers: [{ id: "osm", type: "raster", source: "osm" }],
 };
 
-function pinEl(color: string, label: string, ring: boolean): HTMLDivElement {
+function pinEl(color: string, ink: string, label: string, ring: boolean): HTMLDivElement {
   const el = document.createElement("div");
-  el.style.cssText = `width:30px;height:30px;border-radius:999px;background:${color};color:#0E1116;
-    display:grid;place-items:center;font:600 13px var(--font-bricolage),sans-serif;
-    box-shadow:0 2px 8px rgba(0,0,0,.45)${ring ? ",0 0 0 2px #ECEAE4" : ""};cursor:default;`;
+  el.style.cssText = `width:34px;height:34px;border-radius:999px;background:${color};color:${ink};
+    display:grid;place-items:center;font:600 15px var(--font-bricolage),sans-serif;
+    box-shadow:0 2px 8px rgba(0,0,0,.35)${ring ? ",0 0 0 2px var(--c-text)" : ""};cursor:default;`;
   el.textContent = label;
   return el;
 }
 
 function flagEl(): HTMLDivElement {
   const el = document.createElement("div");
-  el.style.cssText = `width:34px;height:34px;border-radius:999px;background:#5BD18A;
-    display:grid;place-items:center;box-shadow:0 0 0 6px rgba(91,209,138,.25);`;
+  el.style.cssText = `width:36px;height:36px;border-radius:999px;background:var(--c-arrived);
+    display:grid;place-items:center;box-shadow:0 0 0 6px var(--c-arrived-soft);color:var(--c-ground);`;
   el.innerHTML =
-    '<svg width="16" height="16" viewBox="0 0 24 24" fill="#0E1116" stroke="#0E1116" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>';
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>';
   return el;
 }
 
@@ -112,7 +114,7 @@ export function LiveMap({
       markerRefs.current = [];
 
       for (const mk of markers) {
-        const marker = new MlNS.Marker({ element: pinEl(mk.color, mk.label, !!mk.you) })
+        const marker = new MlNS.Marker({ element: pinEl(mk.color, mk.ink, mk.label, !!mk.you) })
           .setLngLat([mk.lng, mk.lat])
           .addTo(map);
         markerRefs.current.push(marker);

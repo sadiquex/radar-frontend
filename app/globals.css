@@ -2,23 +2,180 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Design tokens ─────────────────────────────────────────────────────────
+   Light is the base and the default: this app is used outdoors, where a dark
+   ground loses to reflected sunlight. Dark is declared twice so an explicit
+   choice beats the system preference in both directions. Every colour is
+   defined here on bare :root — never only inside a media or [data-theme]
+   block — so nothing can resolve to nothing.
+
+   Values are measured, not eyeballed. See
+   docs/superpowers/specs/2026-09-04-mobile-light-redesign-design.md §5.
+   `faint` is NOT a text colour in either theme (§5.2): it clears the 3:1 that
+   non-text UI needs and nothing more. Labels use `muted`.
+   ------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+  --c-ground: #F5F3EE;
+  --c-raised: #FFFFFF;
+  --c-sunken: #E7E3DA;
+  --c-line: #CFCAC0;
+  --c-line-strong: #6E6A61;
+  --c-text: #15171B;
+  --c-muted: #54595F;
+  --c-faint: #767B83;
+  --c-arrived: #0B6B3A;
+  --c-withg: #3E4752;
+  --c-ahead: #1B4FA8;
+  --c-behind: #9C4208;
+  --c-stopped: #A11B1B;
+  --c-arrived-soft: #dee5dc;
+  --c-withg-soft: #e3e2de;
+  --c-ahead-soft: #dfe3e7;
+  --c-behind-soft: #ece1d7;
+  --c-stopped-soft: #edddd9;
+  --c-scrim: #fefefe;
+  --c-av-0: #7D5F2A;
+  --c-av-1: #2E7D6B;
+  --c-av-2: #7B4B9E;
+  --c-av-3: #7A5C10;
+  --c-av-4: #2F5F9E;
+  --c-av-5: #1F7A5C;
+  --c-av-6: #A03D5C;
+  --c-av-7: #8F4E14;
+  --c-av-0-ink: #FFFFFF;
+  --c-av-1-ink: #FFFFFF;
+  --c-av-2-ink: #FFFFFF;
+  --c-av-3-ink: #FFFFFF;
+  --c-av-4-ink: #FFFFFF;
+  --c-av-5-ink: #FFFFFF;
+  --c-av-6-ink: #FFFFFF;
+  --c-av-7-ink: #FFFFFF;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c-ground: #0E1116;
+    --c-raised: #1C2129;
+    --c-sunken: #0A0C10;
+    --c-line: #2C333F;
+    --c-line-strong: #5C6472;
+    --c-text: #ECEAE4;
+    --c-muted: #A8ADB6;
+    --c-faint: #868C96;
+    --c-arrived: #5BD18A;
+    --c-withg: #8A93A1;
+    --c-ahead: #7FADFF;
+    --c-behind: #F5904C;
+    --c-stopped: #FF6B6B;
+    --c-arrived-soft: #162422;
+    --c-withg-soft: #1a1e24;
+    --c-ahead-soft: #19212d;
+    --c-behind-soft: #251e1b;
+    --c-stopped-soft: #261a1f;
+    --c-scrim: #1b2028;
+    --c-av-0: #E8A87C;
+    --c-av-1: #85C7B2;
+    --c-av-2: #C8A2D8;
+    --c-av-3: #F0C674;
+    --c-av-4: #7BA4D0;
+    --c-av-5: #9DD0C0;
+    --c-av-6: #E0A0B0;
+    --c-av-7: #D8B48A;
+    --c-av-0-ink: #0E1116;
+    --c-av-1-ink: #0E1116;
+    --c-av-2-ink: #0E1116;
+    --c-av-3-ink: #0E1116;
+    --c-av-4-ink: #0E1116;
+    --c-av-5-ink: #0E1116;
+    --c-av-6-ink: #0E1116;
+    --c-av-7-ink: #0E1116;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c-ground: #0E1116;
+  --c-raised: #1C2129;
+  --c-sunken: #0A0C10;
+  --c-line: #2C333F;
+  --c-line-strong: #5C6472;
+  --c-text: #ECEAE4;
+  --c-muted: #A8ADB6;
+  --c-faint: #868C96;
+  --c-arrived: #5BD18A;
+  --c-withg: #8A93A1;
+  --c-ahead: #7FADFF;
+  --c-behind: #F5904C;
+  --c-stopped: #FF6B6B;
+  --c-arrived-soft: #162422;
+  --c-withg-soft: #1a1e24;
+  --c-ahead-soft: #19212d;
+  --c-behind-soft: #251e1b;
+  --c-stopped-soft: #261a1f;
+  --c-scrim: #1b2028;
+  --c-av-0: #E8A87C;
+  --c-av-1: #85C7B2;
+  --c-av-2: #C8A2D8;
+  --c-av-3: #F0C674;
+  --c-av-4: #7BA4D0;
+  --c-av-5: #9DD0C0;
+  --c-av-6: #E0A0B0;
+  --c-av-7: #D8B48A;
+  --c-av-0-ink: #0E1116;
+  --c-av-1-ink: #0E1116;
+  --c-av-2-ink: #0E1116;
+  --c-av-3-ink: #0E1116;
+  --c-av-4-ink: #0E1116;
+  --c-av-5-ink: #0E1116;
+  --c-av-6-ink: #0E1116;
+  --c-av-7-ink: #0E1116;
+}
+
 html, body {
-  background: #08090C;
-  color: #ECEAE4;
+  background: var(--c-ground);
+  color: var(--c-text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* No pull-to-refresh mid-ride, and no rubber-banding the whole app. */
+  overscroll-behavior-y: none;
 }
 
 * {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Safe-area insets, resolved once so screens can compose them.
+   Non-zero only because layout.tsx sets viewportFit: "cover". */
+:root {
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+}
+
 /* Keyboard focus only — visible ring for a11y without affecting mouse/touch. */
 :focus-visible {
-  outline: 2px solid #F5904C;
+  outline: 2px solid var(--c-line-strong);
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* OSM raster tiles are a light photographic surface, so in dark mode the map
+   would be a glaring white rectangle — at night, exactly when it hurts most.
+   The filter targets the canvas ONLY: markers are sibling DOM inside
+   .maplibregl-map and must not be inverted with it. A keyed dark vector
+   provider is the real fix; this is the honest interim. */
+:root[data-theme="dark"] .maplibregl-canvas {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) saturate(0.75);
+}
+/* Attribution sits over the filtered canvas, so it gets its own colour. */
+.maplibregl-ctrl-attrib {
+  background: var(--c-scrim) !important;
+  color: var(--c-muted) !important;
+}
+.maplibregl-ctrl-attrib a { color: var(--c-muted) !important; }
 
 @keyframes gtpulse {
   0%, 100% { transform: scale(1); opacity: 1; }
@@ -35,9 +192,21 @@ html, body {
   animation: gtrise 0.42s cubic-bezier(0.2, 0, 0, 1) both;
 }
 
+@keyframes gtsheet {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gt-sheet {
+  animation: gtsheet 0.22s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
 .tnum {
   font-variant-numeric: tabular-nums;
 }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

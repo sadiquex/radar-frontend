@@ -1,8 +1,10 @@
-# Caravan
+# Radar
 
 Temporary location sharing for groups moving together. No accounts, no app install, expires in 8 hours.
 
 Next.js 14 (App Router) + TypeScript + Tailwind + MapLibre. **The frontend flow is fully functional** — create a trip, share a link, join, share live location, and watch who's ahead / behind / with the group / stopped / arrived. It runs entirely in the browser today on a local data layer; the backend (Supabase) is deferred and slots in without changing the UI.
+
+Built mobile-first for people moving outdoors, with a sunlight-grade light theme as the default and a real dark theme for night. The design and the reasoning behind every value are in `docs/superpowers/specs/2026-09-04-mobile-light-redesign-design.md`.
 
 ## Getting started
 
@@ -43,16 +45,20 @@ app/
   t/[code]/page.tsx         Live group view (geolocation, statuses, notifications, map/member sub-views)
   t/[code]/join/page.tsx    Join by link (code prefilled)
   components/
-    GroupTrack.tsx          Prop-driven screen library + design tokens (C / FONT) + Member view-model
+    Radar.tsx               Prop-driven screen library + design tokens (C / FONT) + Member view-model,
+                            plus MenuSheet (trip options) and GlanceView (bar-mount mode)
     PhoneFrame.tsx          Phone-shaped shell (full screen on mobile, device frame on desktop)
     JoinFlow.tsx            Shared join logic for both join routes
     LiveMap.tsx             MapLibre GL map (OSM tiles) — live pins + destination picker
   hooks/
-    useGeolocation.ts       watchPosition wrapper → throttled writes to the data layer
+    useGeolocation.ts       watchPosition wrapper → speed-aware writes to the data layer
+    useWakeLock.ts          Holds the screen awake while a trip is live
 lib/
   data/                     Swappable data layer: local.ts (localStorage store) + index.ts (singleton + cross-tab sync)
   clientId.ts               Per-browser identity (no accounts)
-  shareCode.ts  geo.ts  status.ts  notify.ts  demo.ts   (pure logic; unit-tested in lib/__tests__/)
+  brand.ts                  PRODUCT_NAME — the single source for every user-visible mention
+  shareCode.ts  geo.ts  status.ts  notify.ts  demo.ts
+  verdict.ts  theme.ts  haptics.ts              (pure logic; unit-tested in lib/__tests__/)
 docs/
   PRD.md                    Product spec
   superpowers/plans/        Phased roadmap + per-phase plans
@@ -69,23 +75,28 @@ The entire app talks to one interface: the `data` singleton (`lib/data/index.ts`
 | All screens, real routes & navigation | Real |
 | Trip create / share code / join by link or code | Real (local data layer) |
 | Live member sync | Real — cross-tab today via storage events; Supabase Realtime later |
-| Geolocation | Real `navigator.geolocation.watchPosition`, throttled (~20–30s + significant-move) |
+| Geolocation | Real `navigator.geolocation.watchPosition`, speed-aware cadence (20s/30m walking → 5s/20m riding) |
 | Status engine (ahead/behind/with/stopped/arrived) | Real, pure + unit-tested |
 | Map | Real — MapLibre GL + OpenStreetMap tiles, live pins, destination picker |
 | Notifications | Real — opt-in browser notifications + in-app toasts on status changes |
+| Haptics | Real on Android; `navigator.vibrate` does not exist in iOS Safari |
+| Screen wake lock | Real where supported (iOS 16.4+, most Android); a silent no-op elsewhere |
+| Light / dark themes | Real — light default, follows the system preference, manual override in ⋯ |
 | Persistence / multi-device across the internet | Deferred — needs Supabase (currently per-browser localStorage) |
 | Geocoding (destination name → coordinates) | Deferred — set the destination via the map picker for now |
 | Trip expiry job, RLS, PWA install | Deferred — see the roadmap |
 
 ## Design system
 
-Tokens are in the `C` object at the top of `GroupTrack.tsx`. Status colors are the only loud thing in the palette; everything else is quiet on a near-black ground.
+`C` in `app/components/Radar.tsx` maps token names to CSS custom properties; the values live in `app/globals.css`, declared for light on `:root` and for dark under both `prefers-color-scheme` and `[data-theme="dark"]`. **You cannot do colour arithmetic in JS** — use the declared `--c-*-soft` tokens.
 
+- **Light is the default and is deliberately flat.** White cards on the light ground measure 1.12:1, a band direct sunlight erases, so structure comes from type, space and hairlines. Dark keeps its card fills — the two themes are tuned to their conditions, not mirrored.
+- **Status carries a glyph** (`✓ ∴ ›› ‹‹ ‖`), not just a colour: five statuses that all pass AA on one ground collide in greyscale, so colour is reinforcement only. Hue maps to urgency and "with group" is neutral — a well-grouped trip renders with no colour at all.
 - **Display**: Bricolage Grotesque (headings, large numbers, the trip code)
 - **Body**: Inter
 - **Data**: JetBrains Mono (distances, timestamps, eyebrow labels)
 
-The "group horizon" at the top of the group view is the product's signature — it answers "where is everyone?" without a map.
+Two things carry the group view: the **verdict** (`lib/verdict.ts`) reduces everyone to one sentence and one number, because a rider at effort reads one field rather than eight; and the **group horizon** answers "where is everyone?" without a map.
 
 ## Remaining work (backend integration)
 

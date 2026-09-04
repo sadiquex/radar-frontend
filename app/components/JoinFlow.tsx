@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhoneFrame } from "./PhoneFrame";
-import { Join, C, FONT } from "./GroupTrack";
+import { Join, C, FONT } from "./Radar";
+import { SHARE_CODE_ALPHABET } from "@/lib/shareCode";
 import { data } from "@/lib/data";
 import { getClientId } from "@/lib/clientId";
 import type { Trip } from "@/lib/types";
@@ -46,8 +47,8 @@ export function JoinFlow({ initialCode }: { initialCode?: string }) {
           </div>
           <button
             onClick={() => router.push("/")}
-            className="mt-4 px-5 py-3 rounded-xl"
-            style={{ background: C.text, color: C.bg, fontFamily: FONT.body, fontWeight: 600 }}
+            className="mt-4 px-6 rounded-2xl"
+            style={{ background: C.text, color: C.ground, fontFamily: FONT.body, fontWeight: 600, minHeight: 52 }}
           >
             Start a new trip
           </button>
@@ -59,6 +60,7 @@ export function JoinFlow({ initialCode }: { initialCode?: string }) {
   return (
     <PhoneFrame>
       <Join
+        alphabet={SHARE_CODE_ALPHABET}
         prefilledCode={trip?.shareCode ?? ""}
         tripName={trip?.name}
         onBack={() => router.push("/")}

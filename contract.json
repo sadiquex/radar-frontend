@@ -1,0 +1,30 @@
+{
+  "$comment": "Golden values shared with the Caravan frontend repo (sadiquex/caravan). This file MUST be byte-identical in both repos. Each repo has a test asserting its own constants against it, so drift fails CI instead of silently breaking 'stopped' detection or share-code lookups. Source of truth: frontend/lib/{shareCode,geo,data/local,notify}.ts",
+  "shareCode": {
+    "alphabet": "ABCDEFGHJKLMNPQRSTUVWXYZ23456789",
+    "length": 6
+  },
+  "movedThresholdM": 20,
+  "tripTtlMs": 28800000,
+  "positionWrite": {
+    "minIntervalMs": 20000,
+    "minDistanceM": 30
+  },
+  "haversineGoldens": [
+    { "a": { "lat": 0, "lng": 0 }, "b": { "lat": 0, "lng": 0 }, "meters": 0.0 },
+    { "a": { "lat": 0, "lng": 0 }, "b": { "lat": 1, "lng": 0 }, "meters": 111194.926645 },
+    { "a": { "lat": 51.5074, "lng": -0.1278 }, "b": { "lat": 48.8566, "lng": 2.3522 }, "meters": 343556.060341 },
+    { "a": { "lat": 5.6037, "lng": -0.187 }, "b": { "lat": 5.60388, "lng": -0.187 }, "meters": 20.015087 },
+    { "a": { "lat": 5.6037, "lng": -0.187 }, "b": { "lat": 5.6137, "lng": -0.187 }, "meters": 1111.949266 }
+  ],
+  "haversineToleranceM": 0.01,
+  "alertTemplates": {
+    "arrived": "{name} has arrived",
+    "behind": "{name} is now behind the group",
+    "ahead": "{name} pulled ahead",
+    "stopped": "{name} has stopped",
+    "with": "{name} is back with the group",
+    "everyoneArrived": "Everyone has arrived",
+    "fallbackName": "Someone"
+  }
+}
