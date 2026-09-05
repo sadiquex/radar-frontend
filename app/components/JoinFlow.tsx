@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhoneFrame } from "./PhoneFrame";
 import { Join, C, FONT } from "./Radar";
+import { GoogleSignInButton } from "./GoogleSignInButton";
+import { useAccount } from "../hooks/useAccount";
 import { SHARE_CODE_ALPHABET } from "@/lib/shareCode";
 import { data, getIdentity, ApiError } from "@/lib/data";
 import type { Trip } from "@/lib/types";
@@ -11,6 +13,7 @@ import type { Trip } from "@/lib/types";
 // Drives both link joins (/t/[code]/join, code prefilled) and manual joins (/join).
 export function JoinFlow({ initialCode }: { initialCode?: string }) {
   const router = useRouter();
+  const account = useAccount();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +88,13 @@ export function JoinFlow({ initialCode }: { initialCode?: string }) {
         onBack={() => router.push("/")}
         onJoin={(input) => void handleJoin(input)}
         busy={busy}
-        error={error}
+        error={error ?? account.error}
+        accountName={account.profile?.displayName ?? null}
+        signInSlot={
+          account.available && account.state === "signedOut" ? (
+            <GoogleSignInButton onCredential={(idToken) => void account.signIn(idToken)} />
+          ) : undefined
+        }
       />
     </PhoneFrame>
   );

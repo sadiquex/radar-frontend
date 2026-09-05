@@ -507,7 +507,27 @@ const VerdictBlock = ({ verdict }: { verdict: Verdict }) => {
 };
 
 // ─── Screen: Landing ────────────────────────────────────────────────────────
-export const Landing = ({ onStart, onJoin }: { onStart: () => void; onJoin: () => void }) => (
+export interface LandingAccount {
+  state: "loading" | "signedOut" | "signedIn";
+  /** The signed-in name, when there is one. */
+  name: string | null;
+  /** Whether sign-in is offered at all — it needs an API and a client id. */
+  available: boolean;
+  onSignOut: () => void;
+  /**
+   * Google's own rendered button, injected rather than imported. This file is
+   * a prop-driven screen library and has no business knowing about Google.
+   */
+  signInSlot?: React.ReactNode;
+}
+
+export const Landing = ({
+  onStart, onJoin, account,
+}: {
+  onStart: () => void;
+  onJoin: () => void;
+  account?: LandingAccount;
+}) => (
   <div
     className="flex flex-col h-full px-6"
     style={{ paddingTop: PAD_T, paddingBottom: PAD_B }}
@@ -558,8 +578,8 @@ export const Landing = ({ onStart, onJoin }: { onStart: () => void; onJoin: () =
       <p
         style={{ fontFamily: FONT.body, color: C.muted, fontSize: 15, lineHeight: 1.5, marginTop: 20 }}
       >
-        Temporary location sharing for groups moving together. No accounts. No app to install.
-        Expires in 8 hours.
+        Temporary location sharing for groups moving together. No account needed. No app to
+        install. Expires in 8 hours.
       </p>
     </div>
 
@@ -572,6 +592,43 @@ export const Landing = ({ onStart, onJoin }: { onStart: () => void; onJoin: () =
         Join with a code
         <CornerDownLeft size={20} />
       </SecondaryButton>
+
+      {/* Signing in only saves re-typing a name, so it sits under the two
+          things people came here to do rather than above them. */}
+      {account?.state === "signedIn" && account.name !== null && (
+        <div
+          className="flex items-center justify-between"
+          style={{ marginTop: 6, paddingTop: 14, borderTop: `1px solid ${C.line}` }}
+        >
+          <span style={{ fontFamily: FONT.body, fontSize: 14, color: C.muted }}>
+            Signed in as{" "}
+            <span style={{ color: C.text, fontWeight: 600 }}>{account.name}</span>
+          </span>
+          <button
+            onClick={account.onSignOut}
+            style={{
+              fontFamily: FONT.body, fontSize: 14, color: C.muted,
+              minHeight: 44, paddingLeft: 8,
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+      )}
+
+      {account?.state === "signedOut" && account.available && (
+        <div
+          className="flex flex-col items-center"
+          style={{ marginTop: 6, paddingTop: 14, borderTop: `1px solid ${C.line}`, gap: 8 }}
+        >
+          {account.signInSlot}
+          <span
+            style={{ fontFamily: FONT.body, fontSize: 12, color: C.muted, textAlign: "center" }}
+          >
+            Optional — it just saves typing your name each trip.
+          </span>
+        </div>
+      )}
     </div>
   </div>
 );
@@ -897,6 +954,7 @@ export const Share = ({
 // ─── Screen: Join ───────────────────────────────────────────────────────────
 export const Join = ({
   prefilledCode = "", tripName, alphabet, onBack, onJoin, busy = false, error,
+  accountName = null, signInSlot,
 }: {
   prefilledCode?: string;
   tripName?: string | null;
@@ -905,13 +963,26 @@ export const Join = ({
   onJoin: (input: { code: string; name: string }) => void;
   busy?: boolean;
   error?: string | null;
+  /**
+   * The signed-in name. When present the name step disappears entirely — which
+   * is the whole reason accounts exist here.
+   */
+  accountName?: string | null;
+  /** Google's button, offered as an alternative to typing a name. */
+  signInSlot?: React.ReactNode;
 }) => {
   const [code, setCode] = useState(prefilledCode);
   const [name, setName] = useState("");
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  // Set when a signed-in person wants a different name for this one trip.
+  const [overrideName, setOverrideName] = useState(false);
+
+  const signedInName = accountName?.trim() ?? "";
+  // A signed-in name satisfies the name step, unless they asked to change it.
+  const nameFromAccount = signedInName.length > 0 && !overrideName;
   const codeLocked = prefilledCode.length > 0;
-  const step = !code ? 0 : !name ? 1 : 2;
+  const step = !code ? 0 : nameFromAccount || name ? 2 : 1;
 
   // Resolved after mount, not during render: there is no `navigator` on the
   // server, so testing for a camera inline renders the button on the client
@@ -1019,7 +1090,29 @@ export const Join = ({
           </>
         )}
 
-        {step >= 1 && !scanning && (
+        {!scanning && code !== "" && nameFromAccount && (
+          // Named, without asking. Shown rather than silent, because joining
+          // under a name you did not type would be a surprise.
+          <div
+            className="flex items-center justify-between rounded-2xl"
+            style={{
+              marginTop: 24, padding: "14px 16px",
+              background: C.raised, border: `1px solid ${C.line}`,
+            }}
+          >
+            <span style={{ fontFamily: FONT.body, fontSize: 15, color: C.text }}>
+              Joining as <span style={{ fontWeight: 600 }}>{signedInName}</span>
+            </span>
+            <button
+              onClick={() => setOverrideName(true)}
+              style={{ fontFamily: FONT.body, fontSize: 14, color: C.muted, minHeight: 44 }}
+            >
+              Change
+            </button>
+          </div>
+        )}
+
+        {step >= 1 && !scanning && !nameFromAccount && (
           <div style={{ marginTop: 24 }}>
             <Field label="YOUR NAME">
               <input
@@ -1031,6 +1124,17 @@ export const Join = ({
                 style={{ color: C.text, fontFamily: FONT.body, fontSize: 16 }}
               />
             </Field>
+
+            {/* Offered here as well as on the landing screen: this is the
+                moment the typing is actually annoying. */}
+            {signInSlot !== undefined && signedInName.length === 0 && (
+              <div className="flex flex-col items-center" style={{ marginTop: 18, gap: 8 }}>
+                <span style={{ fontFamily: FONT.body, fontSize: 13, color: C.muted }}>
+                  or sign in and skip this next time
+                </span>
+                {signInSlot}
+              </div>
+            )}
           </div>
         )}
 
@@ -1069,7 +1173,13 @@ export const Join = ({
       <div className="px-6" style={{ paddingTop: 12, paddingBottom: PAD_B }}>
         <PrimaryButton
           disabled={step < 2 || busy}
-          onClick={() => { if (step >= 2 && !busy) onJoin({ code, name: name.trim() }); }}
+          onClick={() => {
+            if (step < 2 || busy) return;
+            // The account name is sent explicitly rather than omitted: the
+            // server would fall back to it anyway, but being explicit keeps
+            // this screen's behaviour independent of that.
+            onJoin({ code, name: nameFromAccount ? signedInName : name.trim() });
+          }}
         >
           {busy ? "Joining…" : step === 0 ? "Enter a code" : step === 1 ? "Add your name" : "Join trip"}
           <ArrowRight size={20} />

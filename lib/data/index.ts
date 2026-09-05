@@ -8,6 +8,8 @@ import { recordServerTime, serverNow, clockOffsetMs } from "../serverTime";
 import { createRealtime } from "../realtime";
 import { createNotificationsClient, offlineNotifications } from "./notifications";
 import type { NotificationsClient } from "./notifications";
+import { createAccountClient, offlineAccount } from "./account";
+import type { AccountClient } from "./account";
 import type { DataClient } from "./types";
 import type { StorageLike } from "./local";
 
@@ -33,6 +35,7 @@ function createApiClient(baseUrl: string): {
   data: DataClient;
   identity: () => Promise<string>;
   notifications: NotificationsClient;
+  account: AccountClient;
 } {
   const session = createSessionStore({
     storage: getStorage(),
@@ -59,6 +62,7 @@ function createApiClient(baseUrl: string): {
     data,
     identity: async () => (await session.get()).deviceId,
     notifications: createNotificationsClient({ baseUrl, session }),
+    account: createAccountClient({ baseUrl, session }),
   };
 }
 
@@ -68,6 +72,7 @@ function createOfflineClient(): {
   data: DataClient;
   identity: () => Promise<string>;
   notifications: NotificationsClient;
+  account: AccountClient;
 } {
   const data = createLocalAsyncData({
     storage: getStorage(),
@@ -76,7 +81,12 @@ function createOfflineClient(): {
     now: () => Date.now(),
   });
   // Offline identity stays the original per-browser UUID.
-  return { data, identity: async () => getClientId(), notifications: offlineNotifications };
+  return {
+    data,
+    identity: async () => getClientId(),
+    notifications: offlineNotifications,
+    account: offlineAccount,
+  };
 }
 
 const active = BACKEND === "http" ? createApiClient(normalizeBaseUrl(API_URL!)) : createOfflineClient();
@@ -96,8 +106,21 @@ export const notifications = active.notifications;
 /** Which implementation is live. Surfaced so a screen can explain itself. */
 export const backend = BACKEND;
 
+/** The account behind this device, if any. A no-op when running offline. */
+export const account = active.account;
+
 /** Empty when push is not configured; the bell falls back to tab-only alerts. */
 export const vapidPublicKey = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "").trim();
+
+/**
+ * The Google OAuth client id. Must match GOOGLE_CLIENT_ID on the API, or every
+ * token is rejected on the audience check. Empty disables sign-in entirely and
+ * the app stays fully usable anonymously.
+ */
+export const googleClientId = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "").trim();
+
+/** Whether to offer sign-in at all. */
+export const signInAvailable = BACKEND === "http" && googleClientId.length > 0;
 
 export { ApiError, isTripGone, isNotMember, isRateLimited } from "./types";
 export type { DataClient } from "./types";

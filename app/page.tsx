@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhoneFrame } from "./components/PhoneFrame";
 import { Landing, Create, Share } from "./components/Radar";
+import { GoogleSignInButton } from "./components/GoogleSignInButton";
+import { useAccount } from "./hooks/useAccount";
 import { data, getIdentity } from "@/lib/data";
 import type { Trip } from "@/lib/types";
 
@@ -11,6 +13,7 @@ type Step = "landing" | "create" | "share";
 
 export default function Home() {
   const router = useRouter();
+  const account = useAccount();
   const [step, setStep] = useState<Step>("landing");
   const [trip, setTrip] = useState<Trip | null>(null);
   const [memberCount, setMemberCount] = useState(0);
@@ -77,7 +80,19 @@ export default function Home() {
   return (
     <PhoneFrame>
       {step === "landing" && (
-        <Landing onStart={() => setStep("create")} onJoin={() => router.push("/join")} />
+        <Landing
+          onStart={() => setStep("create")}
+          onJoin={() => router.push("/join")}
+          account={{
+            state: account.state,
+            name: account.profile?.displayName ?? null,
+            available: account.available,
+            onSignOut: () => void account.signOut(),
+            signInSlot: (
+              <GoogleSignInButton onCredential={(idToken) => void account.signIn(idToken)} />
+            ),
+          }}
+        />
       )}
       {step === "create" && (
         <Create
