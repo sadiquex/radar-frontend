@@ -6,6 +6,8 @@ import { getClientId } from "../clientId";
 import { generateShareCode } from "../shareCode";
 import { recordServerTime, serverNow, clockOffsetMs } from "../serverTime";
 import { createRealtime } from "../realtime";
+import { createNotificationsClient, offlineNotifications } from "./notifications";
+import type { NotificationsClient } from "./notifications";
 import type { DataClient } from "./types";
 import type { StorageLike } from "./local";
 
@@ -27,7 +29,11 @@ function getStorage(): StorageLike {
 
 // ── The API-backed implementation ───────────────────────────────────────────
 
-function createApiClient(baseUrl: string): { data: DataClient; identity: () => Promise<string> } {
+function createApiClient(baseUrl: string): {
+  data: DataClient;
+  identity: () => Promise<string>;
+  notifications: NotificationsClient;
+} {
   const session = createSessionStore({
     storage: getStorage(),
     // The one unauthenticated call in the app: exchange nothing for an identity.
@@ -52,12 +58,17 @@ function createApiClient(baseUrl: string): { data: DataClient; identity: () => P
   return {
     data,
     identity: async () => (await session.get()).deviceId,
+    notifications: createNotificationsClient({ baseUrl, session }),
   };
 }
 
 // ── The offline implementation ──────────────────────────────────────────────
 
-function createOfflineClient(): { data: DataClient; identity: () => Promise<string> } {
+function createOfflineClient(): {
+  data: DataClient;
+  identity: () => Promise<string>;
+  notifications: NotificationsClient;
+} {
   const data = createLocalAsyncData({
     storage: getStorage(),
     genId: () => crypto.randomUUID(),
@@ -65,7 +76,7 @@ function createOfflineClient(): { data: DataClient; identity: () => Promise<stri
     now: () => Date.now(),
   });
   // Offline identity stays the original per-browser UUID.
-  return { data, identity: async () => getClientId() };
+  return { data, identity: async () => getClientId(), notifications: offlineNotifications };
 }
 
 const active = BACKEND === "http" ? createApiClient(normalizeBaseUrl(API_URL!)) : createOfflineClient();
@@ -79,8 +90,14 @@ export const data: DataClient = active.data;
  */
 export const getIdentity = active.identity;
 
+/** Push subscriptions and status reports. A no-op when running offline. */
+export const notifications = active.notifications;
+
 /** Which implementation is live. Surfaced so a screen can explain itself. */
 export const backend = BACKEND;
+
+/** Empty when push is not configured; the bell falls back to tab-only alerts. */
+export const vapidPublicKey = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "").trim();
 
 export { ApiError, isTripGone, isNotMember, isRateLimited } from "./types";
 export type { DataClient } from "./types";

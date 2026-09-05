@@ -9,7 +9,8 @@ import {
 } from "../../components/Radar";
 import { useGeolocation } from "../../hooks/useGeolocation";
 import { useWakeLock } from "../../hooks/useWakeLock";
-import { data, getIdentity } from "@/lib/data";
+import { data, getIdentity, notifications, vapidPublicKey } from "@/lib/data";
+import { enablePush, disablePush, pushSupported, needsHomeScreenInstall } from "@/lib/push";
 import { serverNow } from "@/lib/serverTime";
 import { computeStatuses } from "@/lib/status";
 import { computeVerdict } from "@/lib/verdict";
@@ -218,6 +219,21 @@ export default function GroupPage() {
     }
     const prev = prevStatuses.current;
     if (prev) {
+      // Tell the server about every transition this device noticed, so members
+      // whose screens are off still hear about it. The server de-duplicates
+      // across the group and renders the wording itself.
+      //
+      // The known hole in doing it client-side: if every screen in the group is
+      // off, nobody is computing statuses, so nobody reports and nobody is
+      // notified — exactly the case push exists for.
+      if (trip) {
+        for (const id of Object.keys(cur)) {
+          if (id in prev && prev[id] !== cur[id]) {
+            void notifications.report(trip.id, id, cur[id]);
+          }
+        }
+      }
+
       const msgs = diffStatuses(prev, cur, names);
       if (msgs.length) {
         flash(msgs[0], verdict.status);
@@ -287,19 +303,55 @@ export default function GroupPage() {
   const toggleNotifs = async () => {
     if (notifsOn) {
       setNotifsOn(false);
+      // Stop the group's pushes reaching a phone whose owner just said no.
+      void disablePush().catch(() => undefined);
+      void notifications.unsubscribe();
       return;
     }
+
     if (typeof Notification === "undefined") {
       // Haptics may still work even where notifications don't.
       setNotifsOn(true);
       flash(hapticsSupported() ? "Buzz alerts on" : "Alerts aren’t supported here");
       return;
     }
+
+    // Web Push keeps working with the screen off, which is the case that
+    // matters here. Where it is unavailable the in-tab toast and buzz remain,
+    // so the toggle still does something rather than refusing.
+    if (pushSupported() && vapidPublicKey !== "") {
+      try {
+        const keys = await enablePush(vapidPublicKey);
+        if (keys !== null) {
+          await notifications.subscribe(keys);
+          setNotifsOn(true);
+          flash("Alerts on, even with the screen off");
+          return;
+        }
+        // Permission declined — fall through to the same message as below.
+      } catch {
+        // Registration or subscription failed. Tab-only alerts still work,
+        // so degrade rather than leaving the bell doing nothing.
+        const perm = Notification.permission;
+        setNotifsOn(perm === "granted");
+        flash(
+          perm === "granted"
+            ? "Alerts on while this screen is open"
+            : "Allow notifications in your browser to enable alerts"
+        );
+        return;
+      }
+    }
+
     const perm =
       Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
     if (perm === "granted") {
       setNotifsOn(true);
-      flash("Alerts on");
+      flash(
+        needsHomeScreenInstall()
+          ? "Alerts on. Add Radar to your Home Screen for alerts with the screen off"
+          : "Alerts on while this screen is open"
+      );
     } else {
       flash("Allow notifications in your browser to enable alerts");
     }

@@ -1,0 +1,11 @@
+{
+  "name": "Radar",
+  "short_name": "Radar",
+  "description": "Temporary location sharing for groups moving together.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0d0e",
+  "theme_color": "#0b0d0e",
+  "icons": []
+}

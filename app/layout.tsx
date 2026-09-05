@@ -41,6 +41,11 @@ export const metadata: Metadata = {
   title: "Radar",
   description:
     "Temporary location sharing for groups moving together. No accounts, no downloads.",
+  // Installability is not a growth feature here: iOS Safari delivers Web Push
+  // only to a PWA added to the Home Screen, so on iPhone this is the
+  // difference between having screen-off alerts and not.
+  manifest: "/manifest.json",
+  appleWebApp: { capable: true, title: "Radar", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
