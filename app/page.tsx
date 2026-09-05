@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhoneFrame } from "./components/PhoneFrame";
-import { Landing, Create, Share, memberFromParticipant, type Member } from "./components/Radar";
+import { Landing, Create, Share } from "./components/Radar";
 import { data, getIdentity } from "@/lib/data";
-import { serverNow } from "@/lib/serverTime";
 import type { Trip } from "@/lib/types";
 
 type Step = "landing" | "create" | "share";
@@ -14,7 +13,7 @@ export default function Home() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("landing");
   const [trip, setTrip] = useState<Trip | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
+  const [memberCount, setMemberCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Only claim we'll hold the screen awake if this browser can actually do it.
@@ -24,32 +23,32 @@ export default function Home() {
     setWakeSupported(typeof navigator !== "undefined" && "wakeLock" in navigator);
   }, []);
 
-  // While on the Share screen, show people joining live.
+  // While on the Share screen, show people arriving.
+  //
+  // A count, by share code — not the roster. The creator has not been through
+  // the name step yet, so they are not a member of their own trip and the
+  // server will not show them who is in it. Asking for the roster here got a
+  // 403 on every poll and the counter sat at zero forever.
   useEffect(() => {
     if (step !== "share" || !trip) return;
     let cancelled = false;
 
     const refresh = async () => {
       try {
-        const [me, participants] = await Promise.all([
-          getIdentity(),
-          data.listParticipants(trip.id),
-        ]);
-        if (cancelled) return;
-        setMembers(
-          participants.map((p, i) => memberFromParticipant(p, me, serverNow(), i))
-        );
+        const count = await data.countMembers(trip.shareCode);
+        if (!cancelled) setMemberCount(count);
       } catch {
-        // The share code is already on screen and the trip exists; a failed
-        // poll gives the creator nothing to act on.
+        // The code is already on screen; a failed poll gives the creator
+        // nothing to act on.
       }
     };
 
     void refresh();
-    const unsub = data.subscribe(trip.id, () => void refresh());
+    // Polled rather than subscribed: the live channel is member-only too.
+    const timer = setInterval(() => void refresh(), 4_000);
     return () => {
       cancelled = true;
-      unsub();
+      clearInterval(timer);
     };
   }, [step, trip]);
 
@@ -93,7 +92,7 @@ export default function Home() {
         <Share
           shareCode={trip.shareCode}
           shareUrl={shareUrl}
-          members={members}
+          memberCount={memberCount}
           onBack={() => setStep("create")}
           onOpen={() => router.push(`/t/${trip.shareCode}`)}
         />

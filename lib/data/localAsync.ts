@@ -34,6 +34,13 @@ export function createLocalAsyncData(deps: LocalDataDeps): DataClient {
       return normalized === null ? null : base.getTripByCode(normalized);
     },
 
+    countMembers: async (code: string): Promise<number> => {
+      const normalized = normalizeShareCode(code);
+      if (normalized === null) return 0;
+      const trip = base.getTripByCode(normalized);
+      return trip === null ? 0 : base.listParticipants(trip.id).length;
+    },
+
     getTripById: async (id: string): Promise<Trip | null> => base.getTripById(id),
 
     listParticipants: async (tripId: string): Promise<Participant[]> =>

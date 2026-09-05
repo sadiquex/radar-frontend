@@ -10,6 +10,14 @@ import type { Participant, Trip, TripInput } from "../types";
 export interface DataClient {
   createTrip(input: TripInput, creatorId: string): Promise<Trip>;
   getTripByCode(code: string): Promise<Trip | null>;
+  /**
+   * How many people have joined, by share code.
+   *
+   * Exists because the Share screen shows this to the creator *before* they
+   * have joined, so it cannot come from the roster — reading that requires
+   * membership. Returns 0 for a trip that is gone.
+   */
+  countMembers(code: string): Promise<number>;
   getTripById(id: string): Promise<Trip | null>;
   listParticipants(tripId: string): Promise<Participant[]>;
   joinTrip(tripId: string, participantId: string, displayName: string): Promise<Participant>;

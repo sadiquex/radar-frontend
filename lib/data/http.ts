@@ -173,6 +173,21 @@ export function createHttpData(deps: HttpDataDeps): DataClient {
       }
     },
 
+    async countMembers(code: string): Promise<number> {
+      const normalized = normalizeShareCode(code);
+      if (normalized === null) return 0;
+      try {
+        const { memberCount } = await request<{ memberCount: number }>(
+          `/v1/trips/by-code/${normalized}`
+        );
+        return typeof memberCount === "number" ? memberCount : 0;
+      } catch (err) {
+        // A trip that is gone has nobody in it, as far as this screen cares.
+        if (err instanceof ApiError && isGoneOrHidden(err)) return 0;
+        throw err;
+      }
+    },
+
     async getTripById(id: string): Promise<Trip | null> {
       try {
         return (await readState(id)).trip;

@@ -86,6 +86,34 @@ export function describeDataClient(
       expect(await data.getTripByCode("nope")).toBeNull();
     });
 
+    it("counts members by share code without needing to be one", async () => {
+      // The Share screen's case exactly: the creator watches people arrive
+      // before going through the name step themselves.
+      const { data, myId } = await setup();
+      const made = await data.createTrip({}, myId);
+      expect(await data.countMembers(made.shareCode)).toBe(0);
+
+      await data.joinTrip(made.id, myId, "Ama");
+      expect(await data.countMembers(made.shareCode)).toBe(1);
+
+      await data.joinTrip(made.id, "demo-kofi", "Kofi");
+      expect(await data.countMembers(made.shareCode)).toBe(2);
+    });
+
+    it("counts zero for a code that is not a trip", async () => {
+      const { data } = await setup();
+      expect(await data.countMembers("ZZZZZZ")).toBe(0);
+      expect(await data.countMembers("nope")).toBe(0);
+    });
+
+    it("counts zero once the trip has ended", async () => {
+      const { data, myId } = await setup();
+      const made = await data.createTrip({}, myId);
+      await data.joinTrip(made.id, myId, "Ama");
+      await data.endTrip(made.id);
+      expect(await data.countMembers(made.shareCode)).toBe(0);
+    });
+
     it("finds a trip by id, for a member", async () => {
       // Membership first, because that is the only way this is ever called:
       // getTripById is the group view's liveness re-check, and the group view

@@ -606,11 +606,16 @@ export const Create = ({
 
 // ─── Screen: Share ──────────────────────────────────────────────────────────
 export const Share = ({
-  shareCode, shareUrl, members, onBack, onOpen,
+  shareCode, shareUrl, memberCount, onBack, onOpen,
 }: {
   shareCode: string;
   shareUrl: string;
-  members: Member[];
+  /**
+   * A count, not a roster. The creator sees this screen before going through
+   * the name step, so they are not a member of their own trip yet and the
+   * server rightly will not show them who is in it — only how many.
+   */
+  memberCount: number;
   onBack: () => void;
   onOpen: () => void;
 }) => {
@@ -713,19 +718,43 @@ export const Share = ({
               className="tnum"
               style={{ fontFamily: FONT.mono, fontSize: 12, color: C.muted }}
             >
-              {members.length} {members.length === 1 ? "person" : "people"}
+              {memberCount} {memberCount === 1 ? "person" : "people"}
             </span>
           </div>
           <div className="flex items-center" style={{ borderTop: `1px solid ${C.line}`, paddingTop: 14 }}>
-            {members.length === 0 ? (
+            {memberCount === 0 ? (
               <span style={{ fontFamily: FONT.body, fontSize: 14, color: C.muted }}>
                 Waiting for people to join…
               </span>
             ) : (
+              // Filled slots rather than initials: this screen knows how many
+              // have arrived, not who they are. Identities appear a tap later,
+              // on the group view.
               <div className="flex" style={{ gap: 6 }}>
-                {members.map((m) => (
-                  <Avatar key={m.id} m={m} size={38} ring={m.you} />
+                {Array.from({ length: Math.min(memberCount, 8) }, (_, i) => (
+                  <span
+                    key={i}
+                    aria-hidden
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 999,
+                      background: `var(--c-av-${i % AVATAR_SLOTS})`,
+                      opacity: 0.9,
+                    }}
+                  />
                 ))}
+                {memberCount > 8 && (
+                  <span
+                    className="tnum"
+                    style={{
+                      fontFamily: FONT.mono, fontSize: 12, color: C.muted,
+                      alignSelf: "center", marginLeft: 4,
+                    }}
+                  >
+                    +{memberCount - 8}
+                  </span>
+                )}
               </div>
             )}
           </div>
