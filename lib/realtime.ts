@@ -64,6 +64,9 @@ export function createRealtime(deps: RealtimeDeps) {
     watch(tripId: string, handlers: WatchHandlers): () => void {
       const url = toWebSocketUrl(baseUrl, tripId);
       let stopped = false;
+      // Set when the server has told us this will never work. Kept apart from
+      // `stopped`, which means the caller unsubscribed.
+      let refused = false;
       let socket: SocketLike | null = null;
       let retryTimer: ReturnType<typeof setTimeout> | null = null;
       let attempt = 0;
@@ -80,7 +83,7 @@ export function createRealtime(deps: RealtimeDeps) {
       };
 
       function scheduleRetry(): void {
-        if (stopped || retryTimer !== null) return;
+        if (stopped || refused || retryTimer !== null) return;
         const delay = nextDelay();
         attempt += 1;
         retryTimer = setTimeout(() => {
@@ -144,9 +147,23 @@ export function createRealtime(deps: RealtimeDeps) {
                 }
               }
               return;
-            case "error":
-              if (typeof msg.error === "string") handlers.onRefused?.(msg.error);
+            case "error": {
+              if (typeof msg.error !== "string") return;
+              // The server also closes with 1008, but that frame does not
+              // survive every proxy — behind Render's it never arrives at all.
+              // So the message is treated as terminal on its own: give up here
+              // rather than sitting on a socket waiting to be hung up on.
+              refused = true;
+              handlers.onRefused?.(msg.error);
+              handlers.onHealth(false);
+              socket = null;
+              try {
+                ws.close(1000, "refused");
+              } catch {
+                /* already gone */
+              }
               return;
+            }
             default:
               return;
           }
@@ -157,12 +174,16 @@ export function createRealtime(deps: RealtimeDeps) {
         };
 
         ws.onclose = (e) => {
-          if (stopped || socket !== ws) return;
+          // Already handled by the refusal path above, or unsubscribed.
+          if (stopped || refused || socket !== ws) return;
           socket = null;
           handlers.onHealth(false);
           // 1008 is the server telling us this will never work: the trip
           // ended, or we are not a member. Retrying would hammer it forever.
-          if (e.code === POLICY_VIOLATION) return;
+          if (e.code === POLICY_VIOLATION) {
+            refused = true;
+            return;
+          }
           scheduleRetry();
         };
       }

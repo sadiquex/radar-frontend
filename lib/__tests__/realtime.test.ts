@@ -267,6 +267,55 @@ describe("createRealtime", () => {
     stop();
   });
 
+  it("gives up on a refusal message alone, without waiting for a close", async () => {
+    // Behind Render's proxy the server's close(1008) frame never reaches the
+    // client — verified against the deployed API. Depending on it meant a
+    // refused socket sat open forever, so the error message has to be enough
+    // on its own.
+    const { realtime, onChange, onHealth } = setup();
+    const stop = realtime.watch(TRIP, { onChange, onHealth });
+    const ws = await handshake();
+
+    ws.deliver({ type: "error", error: "forbidden" });
+    // The client hangs up itself rather than waiting to be hung up on.
+    expect(ws.closedWith).not.toBeNull();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(FakeSocket.instances).toHaveLength(1);
+    stop();
+  });
+
+  it("reports unhealthy when it gives up", async () => {
+    const { realtime, onChange, onHealth } = setup();
+    const stop = realtime.watch(TRIP, { onChange, onHealth });
+    const ws = await handshake();
+    onHealth.mockClear();
+    ws.deliver({ type: "error", error: "ended" });
+    // So the caller falls back to polling instead of believing it is live.
+    expect(onHealth).toHaveBeenCalledWith(false);
+    stop();
+  });
+
+  it("does not reconnect if a close does arrive after a refusal", async () => {
+    // Belt and braces: on a proxy that *does* forward the close, the refusal
+    // must not be retried twice over.
+    const { realtime, onChange, onHealth } = setup();
+    const stop = realtime.watch(TRIP, { onChange, onHealth });
+    const ws = await handshake();
+    ws.deliver({ type: "error", error: "forbidden" });
+    ws.serverClose(1006);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(FakeSocket.instances).toHaveLength(1);
+    stop();
+  });
+
+  it("ignores an error frame that names no reason", async () => {
+    const { realtime, onChange, onHealth } = setup();
+    const stop = realtime.watch(TRIP, { onChange, onHealth });
+    const ws = await handshake();
+    expect(() => ws.deliver({ type: "error" })).not.toThrow();
+    stop();
+  });
+
   it("stops reconnecting once the caller unsubscribes", async () => {
     const { realtime, onChange, onHealth } = setup();
     const stop = realtime.watch(TRIP, { onChange, onHealth });
