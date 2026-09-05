@@ -521,6 +521,27 @@ export interface LandingAccount {
   signInSlot?: React.ReactNode;
 }
 
+/**
+ * The Radar mark, in its reduced form — one range ring, you at the centre, one
+ * contact riding the ring. The same drawing as `app/icon.svg`, and the reason
+ * it is the reduced form here is the same reason it is there: the full mark
+ * (two rings and two contacts) turns to mush below about 40px, and this
+ * lockup sits at 18.
+ *
+ * Colours come from `C`, so it follows the theme with no re-render — but note
+ * the favicon cannot do that and hard-codes both palettes instead.
+ */
+export const Mark = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 64 64" role="img" aria-label={PRODUCT_NAME}>
+    <circle
+      cx="32" cy="32" r="21" fill="none"
+      stroke={C.text} strokeOpacity={0.45} strokeWidth={6}
+    />
+    <circle cx="32" cy="32" r="9.5" fill={C.arrived} />
+    <circle cx="47.5" cy="16.5" r="7.5" fill={C.ahead} />
+  </svg>
+);
+
 export const Landing = ({
   onStart, onJoin, account,
 }: {
@@ -533,7 +554,7 @@ export const Landing = ({
     style={{ paddingTop: PAD_T, paddingBottom: PAD_B }}
   >
     <div className="flex items-center gap-2">
-      <div style={{ width: 8, height: 8, borderRadius: 999, background: C.behind }} />
+      <Mark size={18} />
       <span
         style={{ fontFamily: FONT.display, fontWeight: 600, letterSpacing: "-0.02em", color: C.text, fontSize: 16 }}
       >

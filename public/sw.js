@@ -28,6 +28,12 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification("Radar", {
       body,
+      // Without these the notification wears the browser's own logo, so an
+      // alert about your group reads as an alert from Chrome.
+      icon: "/icon-192.png",
+      // Android tints the badge and uses only its alpha channel, which is why
+      // that file is a white silhouette rather than the coloured mark.
+      badge: "/icon-badge.png",
       // One tag per trip, so successive alerts replace each other instead of
       // stacking up on a lock screen someone reads at a glance.
       tag: `radar${url}`,

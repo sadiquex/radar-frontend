@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "icons": "node scripts/gen-icons.mjs"
   },
   "dependencies": {
     "jsqr": "^1.4.0",
