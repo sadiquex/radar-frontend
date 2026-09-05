@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight, ArrowLeft, Share2, Copy, MapPin, Flag, Users, Bell, BellOff,
   Check, Plus, X, Navigation, ChevronRight, CornerDownLeft, Maximize2,
-  MoreHorizontal, Sun, Moon, Monitor, Smartphone, AlertTriangle,
-} from "lucide-react";
+  MoreHorizontal, Sun, Moon, Monitor, Smartphone, AlertTriangle, QrCode} from "lucide-react";
+import { qrSvg } from "@/lib/qrCode";
+import { startScanner, cameraSupported, type CameraFailure } from "@/lib/qrScanner";
+import { parseScannedCode } from "@/lib/scan";
 import type { Participant, StatusKey } from "@/lib/types";
 import type { Verdict, VerdictTone } from "@/lib/verdict";
 import type { ThemeChoice } from "@/lib/theme";
@@ -211,6 +213,120 @@ const AvatarWithStatus = ({ m, size = 32 }: { m: Member; size?: number }) => (
     )}
   </div>
 );
+
+// A real, scannable QR. The colour comes from currentColor so it survives both
+// themes, and --qr-bg paints the light modules so it reads on a dark ground.
+const QrBlock = ({ text, size = 176 }: { text: string; size?: number }) => {
+  const svg = useMemo(() => qrSvg(text), [text]);
+  return (
+    <div
+      className="grid place-items-center rounded-2xl"
+      style={{
+        width: size, height: size, padding: 10,
+        background: "#FFFFFF", color: "#000000",
+        // The white ground is deliberate rather than themed: scanners are far
+        // more reliable on dark-on-light, whichever theme the app is in.
+        ["--qr-bg" as string]: "#FFFFFF",
+      }}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+};
+
+// Camera view for joining by QR. Mounted only while scanning, so the camera is
+// never held open in the background.
+const QrScanner = ({
+  onCode, onClose,
+}: {
+  onCode: (text: string) => void;
+  onClose: () => void;
+}) => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [failure, setFailure] = useState<CameraFailure | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video === null) return;
+    let handle: { stop: () => void } | null = null;
+    let done = false;
+
+    void startScanner({
+      video,
+      onCode: (text) => {
+        if (done) return;
+        done = true;
+        handle?.stop();
+        onCode(text);
+      },
+      onError: setFailure,
+    }).then((h) => {
+      handle = h;
+      // Closed while permission was pending: stop before the camera lights up.
+      if (done) h.stop();
+    });
+
+    return () => {
+      done = true;
+      handle?.stop();
+    };
+    // onCode is stable for the life of this panel.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const message =
+    failure === "denied"
+      ? "Camera access was declined. Allow it in your browser settings, or type the code instead."
+      : failure === "unavailable"
+      ? "No camera available here. Type the code instead."
+      : failure === "failed"
+      ? "The camera didn't start. Try again, or type the code instead."
+      : null;
+
+  return (
+    <div className="flex flex-col" style={{ gap: 14 }}>
+      <div
+        className="relative overflow-hidden rounded-2xl"
+        style={{ background: "#000", aspectRatio: "1 / 1", border: `1px solid ${C.line}` }}
+      >
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          className="absolute inset-0 h-full w-full"
+          style={{ objectFit: "cover" }}
+        />
+        {message === null && (
+          // A frame to aim with — people point the phone much more accurately
+          // when there is something to line the code up inside.
+          <div
+            aria-hidden
+            className="absolute"
+            style={{
+              inset: "18%", borderRadius: 16,
+              border: `2px solid rgba(255,255,255,0.85)`,
+              boxShadow: "0 0 0 9999px rgba(0,0,0,0.35)",
+            }}
+          />
+        )}
+        {message !== null && (
+          <div
+            className="absolute inset-0 grid place-items-center px-6 text-center"
+            style={{ fontFamily: FONT.body, fontSize: 14, color: "#fff" }}
+            role="alert"
+          >
+            {message}
+          </div>
+        )}
+      </div>
+      <button
+        onClick={onClose}
+        style={{ fontFamily: FONT.body, fontSize: 14, color: C.muted, minHeight: 44 }}
+      >
+        Enter the code instead
+      </button>
+    </div>
+  );
+};
 
 const PrimaryButton = ({
   onClick, children, disabled = false, tone,
@@ -711,6 +827,13 @@ export const Share = ({
           </button>
         </div>
 
+        <div className="flex flex-col items-center" style={{ marginTop: 26, gap: 10 }}>
+          <QrBlock text={shareUrl} />
+          <span style={{ fontFamily: FONT.body, fontSize: 13, color: C.muted }}>
+            Or point a camera at this
+          </span>
+        </div>
+
         <div style={{ marginTop: 28 }}>
           <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
             <Eyebrow>JOINED</Eyebrow>
@@ -785,8 +908,21 @@ export const Join = ({
 }) => {
   const [code, setCode] = useState(prefilledCode);
   const [name, setName] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
   const codeLocked = prefilledCode.length > 0;
   const step = !code ? 0 : !name ? 1 : 2;
+
+  // Resolved after mount, not during render: there is no `navigator` on the
+  // server, so testing for a camera inline renders the button on the client
+  // but not in the server HTML — a hydration mismatch. Same pattern as
+  // wakeSupported on the create screen.
+  const [hasCamera, setHasCamera] = useState(false);
+  useEffect(() => {
+    setHasCamera(cameraSupported());
+  }, []);
+  // Nothing to scan for if the code came from the link that opened this screen.
+  const canScan = !codeLocked && hasCamera;
 
   // The trip is looked up in an effect, so on the first render prefilledCode is
   // still "" and useState captures that. Without this, arriving by link left
@@ -821,6 +957,46 @@ export const Join = ({
           {tripName ? `Join "${tripName}"` : "Join a trip"}
         </h2>
 
+        {scanning ? (
+          <QrScanner
+            onCode={(text) => {
+              const scanned = parseScannedCode(text);
+              setScanning(false);
+              // A code that does not parse means the camera caught something
+              // else. Leave the field alone rather than clearing what they typed.
+              if (scanned !== null) setCode(scanned);
+              else setScanError("That isn't a trip code. Try again, or type it in.");
+            }}
+            onClose={() => setScanning(false)}
+          />
+        ) : (
+          <>
+            {canScan && (
+              <button
+                onClick={() => {
+                  setScanError(null);
+                  setScanning(true);
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl"
+                style={{
+                  border: `1px solid ${C.line}`, background: C.raised, color: C.text,
+                  fontFamily: FONT.body, fontSize: 15, fontWeight: 600,
+                  minHeight: 52, marginBottom: 20,
+                }}
+              >
+                <QrCode size={18} /> Scan a QR code
+              </button>
+            )}
+            {scanError !== null && (
+              <div
+                className="flex items-start gap-2"
+                style={{ fontFamily: FONT.body, fontSize: 14, color: C.stopped, marginBottom: 16 }}
+                role="alert"
+              >
+                <AlertTriangle size={16} style={{ marginTop: 2, flexShrink: 0 }} />
+                {scanError}
+              </div>
+            )}
         <Field label="TRIP CODE">
           <input
             value={code}
@@ -840,8 +1016,10 @@ export const Join = ({
             }}
           />
         </Field>
+          </>
+        )}
 
-        {step >= 1 && (
+        {step >= 1 && !scanning && (
           <div style={{ marginTop: 24 }}>
             <Field label="YOUR NAME">
               <input
@@ -856,7 +1034,7 @@ export const Join = ({
           </div>
         )}
 
-        {step >= 2 && (
+        {step >= 2 && !scanning && (
           <div
             className="rounded-2xl"
             style={{ background: C.raised, border: `1px solid ${C.line}`, padding: 16, marginTop: 26 }}
