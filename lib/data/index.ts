@@ -82,5 +82,5 @@ export const getIdentity = active.identity;
 /** Which implementation is live. Surfaced so a screen can explain itself. */
 export const backend = BACKEND;
 
-export { ApiError, isTripGone, isNotMember } from "./types";
+export { ApiError, isTripGone, isNotMember, isRateLimited } from "./types";
 export type { DataClient } from "./types";

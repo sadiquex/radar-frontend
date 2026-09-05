@@ -20,6 +20,9 @@ export function describeDataClient(
   opts: { subscribeWaitMs?: number } = {}
 ) {
   const subscribeWaitMs = opts.subscribeWaitMs ?? 0;
+  // An implementation that falls back to polling needs longer than vitest's
+  // 5s default. Stated here so the suite does not depend on a CLI flag.
+  const subscribeTimeout = subscribeWaitMs + 10_000;
 
   describe(`${name} — DataClient contract`, () => {
     it("creates a trip with a share code and an 8 hour life", async () => {
@@ -209,7 +212,7 @@ export function describeDataClient(
       } finally {
         unsub();
       }
-    });
+    }, subscribeTimeout);
 
     it("stops notifying after unsubscribe", async () => {
       const { data, myId } = await setup();
@@ -224,6 +227,6 @@ export function describeDataClient(
       await data.joinTrip(trip.id, "demo-esi", "Esi");
       if (subscribeWaitMs > 0) await new Promise((r) => setTimeout(r, subscribeWaitMs));
       expect(fired).toBe(0);
-    });
+    }, subscribeTimeout);
   });
 }

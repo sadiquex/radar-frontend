@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { data, isTripGone, isNotMember } from "@/lib/data";
+import { data, isTripGone, isNotMember, isRateLimited } from "@/lib/data";
 import { estimateSpeedMps, shouldWritePosition, type LatLng } from "@/lib/geo";
 
 export type GeoStatus = "idle" | "unsupported" | "prompting" | "granted" | "denied" | "error";
@@ -92,6 +92,13 @@ export function useGeolocation({
               done = true;
               navigator.geolocation.clearWatch(watchId);
               notifyUnavailable.current?.();
+              return;
+            }
+            if (isRateLimited(err)) {
+              // Keep the slot spent. Releasing it here would retry on the very
+              // next GPS fix, roughly a second later, get throttled again, and
+              // turn a rate limit into a retry storm. Holding it lets the
+              // normal write cadence carry us past the window.
               return;
             }
             // Anything else — offline, a blip in a tunnel — is expected on the

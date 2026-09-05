@@ -62,3 +62,11 @@ export function isTripGone(err: unknown): boolean {
 export function isNotMember(err: unknown): boolean {
   return err instanceof ApiError && err.code === "forbidden";
 }
+
+// True when the server is asking us to slow down. Deliberately distinct from
+// "offline": offline means retry as soon as possible, throttled means the
+// exact opposite, and treating them the same turns a rate limit into a
+// retry storm.
+export function isRateLimited(err: unknown): boolean {
+  return err instanceof ApiError && err.code === "rate_limited";
+}
