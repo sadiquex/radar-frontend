@@ -185,6 +185,28 @@ down.
 - Escape, a blur, or a selection dismisses the list.
 - Typing with no network, or upstream failure, shows "No matches" — never an error state.
 
+**House rules this component must follow**, from `CLAUDE.md` and enforced by existing tests:
+
+- **Inline `style={{...}}` referencing `C` and `FONT`, not Tailwind utilities.** Tailwind here only
+  maps the font CSS vars and a few helpers. And `C.x` is a `var(--c-x)` *string*, so no colour
+  arithmetic in JS — use the declared `--c-*-soft` tokens.
+- **The input must be at least 16px**, or iOS Safari zooms the viewport on focus. This is not a
+  preference; `lib/__tests__/tokens.test.ts` asserts it.
+- **If the suggestion list scrolls, it needs `min-h-0`** on the flex child, or it refuses to
+  shrink and pushes the action bar out of frame.
+
+**The regression guards need extending, and this is the interesting part.**
+`tokens.test.ts` scans a hardcoded list — `SCREENS = ["Radar.tsx", "PhoneFrame.tsx",
+"JoinFlow.tsx"]` — for undersized type, and checks `<input>` sizes in `Radar.tsx` alone. A new
+`DestinationSearch.tsx` would join neither, so its input could ship at 14px and both guards would
+stay green.
+
+This repo has already been bitten by exactly this shape of bug: the backend's `resetDb` used a
+hand-written table list and silently stopped truncating `users` when that table was added, which
+is why it now discovers tables from `information_schema`. **Do the same here** — have the guards
+read the component directory rather than a literal list, so the next component added is covered
+without anyone remembering to add it. Adding one filename would also work and is worse.
+
 **Accessibility.** A real combobox: `role="combobox"` with `aria-expanded` and
 `aria-controls` on the input, `role="listbox"`/`option` on the list, `aria-activedescendant`
 tracking the highlighted row, and arrow keys, Enter and Escape all working. A suggestion list
@@ -213,7 +235,11 @@ Pure logic gets real tests, in this project's existing style.
 - **The client-side debounce and the minimum-length rule** extracted to `lib/search.ts` and
   tested there, because the frontend's vitest has no DOM. The component itself is verified in a
   browser.
-- **`createGeocoder`** with a mocked `fetchFn`, in the style of `lib/data/__tests__/account.test.ts`:
+- **The extended token guards** — after switching them to directory discovery, assert they
+  actually pick up the new component, so the fix cannot silently regress to a list.
+- **`createGeocoder`** with a mocked `fetchFn`, in the style of `lib/data/__tests__/account.test.ts`
+  (and note this vitest has no DOM, so any browser global needs `vi.stubGlobal` plus
+  `vi.resetModules()`, per `lib/__tests__/clientId.test.ts`):
   the request carries the bearer token, a non-2xx answers an empty list rather than throwing, and
   a network failure does the same. It is deliberately not part of the `DataClient` conformance
   suite, for the reason given in §4.
@@ -235,6 +261,7 @@ Pure logic gets real tests, in this project's existing style.
 | `frontend/lib/search.ts` | new — debounce and minimum-length logic |
 | `frontend/app/components/DestinationSearch.tsx` | new — the combobox |
 | `frontend/app/components/Radar.tsx` | use it; pass `dest`/`pin` setters |
+| `frontend/lib/__tests__/tokens.test.ts` | discover component files instead of a hardcoded list, so new screens join the type/input guards automatically |
 | `frontend/README.md`, `backend/README.md` | the new endpoint and env var |
 
 ## 13. Risks
