@@ -5,6 +5,8 @@ import {
   ArrowRight, ArrowLeft, Share2, Copy, MapPin, Flag, Users, Bell, BellOff,
   Check, Plus, X, Navigation, ChevronRight, CornerDownLeft, Maximize2,
   MoreHorizontal, Sun, Moon, Monitor, Smartphone, AlertTriangle, QrCode} from "lucide-react";
+import { DestinationSearch } from "./DestinationSearch";
+import type { Place } from "@/lib/data/geocode";
 import { qrSvg } from "@/lib/qrCode";
 import { startScanner, cameraSupported, type CameraFailure } from "@/lib/qrScanner";
 import { parseScannedCode } from "@/lib/scan";
@@ -703,17 +705,11 @@ export const Create = ({
           Both optional, but a destination unlocks the arrival status and the map.
         </p>
 
-        <Field label="DESTINATION">
-          <MapPin size={20} style={{ color: C.muted }} />
-          <input
-            value={dest}
-            onChange={(e) => setDest(e.target.value)}
-            placeholder="Where to?"
-            className="flex-1 bg-transparent outline-none"
-            /* 16px minimum: anything smaller and iOS Safari zooms on focus. */
-            style={{ color: C.text, fontFamily: FONT.body, fontSize: 16 }}
-          />
-        </Field>
+        <DestinationSearch
+          value={dest}
+          onChange={setDest}
+          onSelect={(place: Place) => setPin({ lat: place.lat, lng: place.lng })}
+        />
 
         <button
           onClick={() => setShowMap((v) => !v)}
