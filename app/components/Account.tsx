@@ -170,19 +170,14 @@ export const TripRow = ({
  * Geometry is the full mark from `app/icon.svg`: two range rings, you, and a
  * contact on the outer ring. Not a drawing invented for this screen.
  */
-export const Scope = ({ size = 176 }: { size?: number }) => (
+export const Scope = ({ size = 176 }: { size?: number | string }) => (
   <div
-    className="relative grid place-items-center"
-    style={{ width: size, height: size }}
+    className="relative grid place-items-center shrink-0"
+    style={{ width: size, height: size, aspectRatio: "1" }}
     aria-hidden
   >
     {/* The sweep sits under the rings so it reads as passing beneath them. */}
-    <svg
-      className="gt-sweep absolute inset-0"
-      width={size}
-      height={size}
-      viewBox="0 0 200 200"
-    >
+    <svg className="gt-sweep absolute inset-0 w-full h-full" viewBox="0 0 200 200">
       <defs>
         <linearGradient id="scope-sweep" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor={C.arrived} stopOpacity="0" />
@@ -194,7 +189,7 @@ export const Scope = ({ size = 176 }: { size?: number }) => (
       <line x1="100" y1="100" x2="188" y2="100" stroke={C.arrived} strokeOpacity="0.5" strokeWidth="1.5" />
     </svg>
 
-    <svg className="absolute inset-0" width={size} height={size} viewBox="0 0 200 200">
+    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 200">
       {/* Two range rings, as the full mark has. A third, inner ring was tried
           and sat close enough to the centre dot to read as a halo. */}
       <circle cx="100" cy="100" r="88" fill="none" stroke={C.lineStrong} strokeOpacity="0.55" strokeWidth="1.25" />
@@ -262,8 +257,14 @@ export const TripsScreen = ({
 
       {/* min-h-0 or this refuses to shrink and pushes the tab bar out of frame. */}
       <div
-        className={`flex-1 min-h-0 overflow-y-auto px-6${empty ? " flex flex-col justify-center" : ""}`}
-        style={{ paddingBottom: TAB_BAR_SPACE }}
+        className={`flex-1 min-h-0 overflow-y-auto px-6${empty ? " flex flex-col" : ""}`}
+        style={{
+          paddingBottom: TAB_BAR_SPACE,
+          // `safe`, never a bare `center`: a centred flex container that
+          // overflows pushes content out of both ends, and scrollTop cannot go
+          // negative, so the top of the list becomes unreachable.
+          ...(empty ? { justifyContent: "safe center" as const } : {}),
+        }}
       >
         {live.length > 0 && (
           <div style={{ marginBottom: 24 }}>
@@ -872,14 +873,21 @@ export const YouScreen = ({
 /**
  * What Home shows once somebody is signed in.
  *
- * Built for the empty case first, because that is the case a new account
- * actually lands in and the one the old layout left as seven hundred pixels of
- * nothing. It borrows `Landing`'s proven shape — a centred middle that grows,
- * a fixed stack of actions at the foot — rather than stacking three elements
- * at the top of a column and letting the rest fall away.
+ * **One scroller, and the tab bar is the only fixed thing on the screen.** The
+ * previous version pinned the two actions above the bar, which on a 667px
+ * phone stacked three full-width bands — primary, secondary, nav — into the
+ * bottom third with the fine print pinched between the last two. They read as
+ * one undifferentiated pile of bars. Putting the actions back in the flow, with
+ * the recent list and the fine print below them, means the nav is the only
+ * thing anchored down there and the buttons stop competing with it.
  *
- * The greeting is deliberately small. A name is not information; what is
- * running is, so that gets the size.
+ * **`justify-content: safe center`, never plain `center`.** A centred flex
+ * container that overflows pushes content out of *both* ends, and `scrollTop`
+ * cannot go negative, so the top becomes permanently unreachable — the screen
+ * simply refuses to scroll. `safe` falls back to flex-start the moment content
+ * exceeds the box, and browsers that do not know the keyword drop the whole
+ * declaration and land on flex-start too, which is the behaviour we want
+ * anyway.
  */
 export const HomeDashboard = ({
   name, live, recent, now, onStart, onJoin, onOpenLive, onOpenTrip, onSeeAll,
@@ -898,12 +906,10 @@ export const HomeDashboard = ({
   const people = live.reduce((n, t) => n + t.memberCount, 0);
 
   return (
-    <div
-      className="flex flex-col h-full px-6"
-      style={{ paddingTop: PAD_T, paddingBottom: TAB_BAR_SPACE }}
-    >
-      {/* Identity, then the person — in that order, and both quiet. */}
-      <div className="flex items-center justify-between gap-3">
+    <div className="flex flex-col h-full" style={{ paddingTop: PAD_T }}>
+      {/* Identity, then the person — in that order, and both quiet. Outside the
+          scroller so it stays put while the page moves under it. */}
+      <div className="flex items-center justify-between gap-3 px-6" style={{ paddingBottom: 4 }}>
         <div className="flex items-center gap-2">
           <Mark size={18} />
           <span
@@ -917,19 +923,19 @@ export const HomeDashboard = ({
         </div>
         <span
           className="truncate"
-          style={{ fontFamily: FONT.body, fontSize: 13, color: C.muted, maxWidth: "50%" }}
+          style={{ fontFamily: FONT.body, fontSize: 13, color: C.muted, maxWidth: "55%" }}
         >
           {name}
         </span>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col justify-center">
+      <div
+        className="flex-1 min-h-0 overflow-y-auto px-6 flex flex-col"
+        style={{ justifyContent: "safe center", paddingBottom: TAB_BAR_SPACE }}
+      >
         {running ? (
-          <div className="flex flex-col gap-2" style={{ paddingBlock: 20 }}>
-            <div
-              className="flex items-baseline gap-2"
-              style={{ marginBottom: 4 }}
-            >
+          <div className="flex flex-col gap-2" style={{ paddingTop: 16 }}>
+            <div className="flex items-baseline gap-2" style={{ marginBottom: 2 }}>
               <span
                 className="gtpulse"
                 style={{ width: 8, height: 8, borderRadius: 999, background: C.arrived }}
@@ -957,13 +963,15 @@ export const HomeDashboard = ({
           </div>
         ) : (
           /* The scope, and the verdict beneath it. Same voice as the group
-             screen: one sentence, and it is about the group rather than you. */
-          <div className="flex flex-col items-center text-center" style={{ paddingBlock: 24 }}>
-            <Scope size={196} />
+             screen: one sentence, and it is about the group rather than you.
+             The scope is sized against the viewport so it never crowds the
+             action off a short phone. */
+          <div className="flex flex-col items-center text-center" style={{ paddingTop: 12 }}>
+            <Scope size="clamp(124px, 25vh, 196px)" />
             <h1
               style={{
                 fontFamily: FONT.display, fontSize: 24, fontWeight: 500,
-                letterSpacing: "-0.025em", color: C.text, marginTop: 22,
+                letterSpacing: "-0.025em", color: C.text, marginTop: 20,
               }}
             >
               Nothing running
@@ -980,12 +988,20 @@ export const HomeDashboard = ({
           </div>
         )}
 
+        <div className="flex flex-col gap-3" style={{ paddingTop: 26 }}>
+          <PrimaryButton onClick={onStart}>
+            Start a trip
+            <ArrowRight size={20} />
+          </PrimaryButton>
+          <SecondaryButton onClick={onJoin}>
+            Join with a code
+            <CornerDownLeft size={20} />
+          </SecondaryButton>
+        </div>
+
         {recent.length > 0 && (
-          <div style={{ paddingBottom: 8 }}>
-            <div
-              className="flex items-center justify-between"
-              style={{ marginBottom: 2 }}
-            >
+          <div style={{ paddingTop: 26 }}>
+            <div className="flex items-center justify-between">
               <Eyebrow>RECENT</Eyebrow>
               <button
                 onClick={onSeeAll}
@@ -1001,23 +1017,15 @@ export const HomeDashboard = ({
             ))}
           </div>
         )}
-      </div>
 
-      <div className="flex flex-col gap-3" style={{ paddingTop: 8 }}>
-        <PrimaryButton onClick={onStart}>
-          Start a trip
-          <ArrowRight size={20} />
-        </PrimaryButton>
-        <SecondaryButton onClick={onJoin}>
-          Join with a code
-          <CornerDownLeft size={20} />
-        </SecondaryButton>
         {/* The promise, where a signed-in person can still see it. It was only
-            ever on the landing screen, which they no longer get. */}
+            ever on the landing screen, which they no longer get. Last in the
+            flow, so it is the thing that scrolls away rather than the thing
+            wedged against the nav. */}
         <p
           style={{
             fontFamily: FONT.body, fontSize: 12, lineHeight: 1.5, color: C.muted,
-            textAlign: "center", marginTop: 6, marginBottom: 2,
+            textAlign: "center", paddingTop: 22,
           }}
         >
           Every trip expires in 8 hours and its location data is erased.
