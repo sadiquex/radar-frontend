@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { TripsScreen } from "../../components/Account";
-import { useAccount, useOptimisticSignedIn } from "../../hooks/useAccount";
+import { useAccount } from "../../hooks/useAccount";
 import { useHistory, useLiveTrips } from "../../hooks/useHistory";
 import { liveOnly } from "@/lib/history";
 
@@ -19,7 +19,7 @@ import { liveOnly } from "@/lib/history";
 export default function TripsPage() {
   const router = useRouter();
   const account = useAccount();
-  const signedIn = useOptimisticSignedIn(account.state);
+  const signedIn = account.state === "signedIn";
 
   const { trips, loading, hasMore, loadingMore, loadMore } = useHistory(signedIn);
   const { live } = useLiveTrips(signedIn);
@@ -47,6 +47,7 @@ export default function TripsPage() {
       onOpen={(tripId) => router.push(`/trips/${tripId}`)}
       onOpenLive={(shareCode) => router.push(`/t/${shareCode}`)}
       onLoadMore={() => void loadMore()}
+      onStart={() => router.push("/")}
     />
   );
 }

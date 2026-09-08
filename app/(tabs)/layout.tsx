@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PhoneFrame } from "../components/PhoneFrame";
 import { TabBar, type TabKey } from "../components/TabBar";
 import { TabBarContext, type TabBarControl } from "../components/TabBarContext";
-import { useAccount, useOptimisticSignedIn } from "../hooks/useAccount";
+import { useAccount } from "../hooks/useAccount";
+import { stampSignedIn } from "@/lib/accountFlag";
 
 /**
  * The signed-in shell.
@@ -29,19 +30,26 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   const account = useAccount();
   const [hidden, setHidden] = useState(false);
 
-  // Optimistic, from a cached flag, so the bar is the right shape on the very
-  // first paint. Waiting for /v1/auth/me makes every cold load shift the page
-  // up under whoever is reading it.
-  const signedIn = useOptimisticSignedIn(account.state);
+  // The bar's *visibility* is CSS, decided pre-paint from a cached flag on
+  // <html>; this only corrects that flag once /v1/auth/me has actually
+  // answered. Branching the markup on it instead would mean the server renders
+  // no <nav> and the client renders one — a hydration mismatch on every load,
+  // which React resolves by throwing the whole server document away.
+  useEffect(() => {
+    if (account.state === "loading") return;
+    stampSignedIn(account.state === "signedIn" && account.available);
+  }, [account.state, account.available]);
 
   const control = useMemo<TabBarControl>(() => ({ setHidden }), []);
-  const show = signedIn && account.available && !hidden;
 
   return (
     <TabBarContext.Provider value={control}>
       <PhoneFrame>
         {children}
-        {show && <TabBar active={TAB_FOR_PATH(pathname)} />}
+        {/* `hidden` is false on the first render on both sides, so this stays
+            in step with the server; it only ever flips in response to a step
+            change the user made. */}
+        {!hidden && <TabBar active={TAB_FOR_PATH(pathname)} />}
       </PhoneFrame>
     </TabBarContext.Provider>
   );

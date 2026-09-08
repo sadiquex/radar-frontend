@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import {
-  ArrowLeft, ArrowRight, ChevronRight, Flag, MapPin, Monitor, Moon, Smartphone,
-  Sun, Trash2, Users,
+  ArrowLeft, ArrowRight, ChevronRight, CornerDownLeft, Flag, MapPin, Monitor,
+  Moon, Route, Smartphone, Sun, Trash2, Users,
 } from "lucide-react";
 import {
-  C, FONT, Eyebrow, Glyph, PrimaryButton, SecondaryButton, Row, Switch, STATUS,
+  C, FONT, Eyebrow, Glyph, Mark, PrimaryButton, SecondaryButton, Row, Switch, STATUS,
 } from "./Radar";
+import { PRODUCT_NAME } from "@/lib/brand";
 import { LiveMap } from "./LiveMap";
 import { TAB_BAR_SPACE } from "./TabBar";
 import type { AccountDevice } from "@/lib/data/account";
@@ -155,10 +156,76 @@ export const TripRow = ({
   );
 };
 
+
+/**
+ * The scope: Radar's own mark, at the size where it can carry a screen.
+ *
+ * This is the answer to a Home screen with nothing on it. The product is called
+ * Radar and its mark is a top-down radar — you at the centre, the group around
+ * you — so an empty scope is not a placeholder for missing content. It *is* the
+ * content: nobody is out there right now. When a trip is running the live cards
+ * take this space, which is the same information rendered as something you can
+ * tap.
+ *
+ * Geometry is the full mark from `app/icon.svg`: two range rings, you, and a
+ * contact on the outer ring. Not a drawing invented for this screen.
+ */
+export const Scope = ({ size = 176 }: { size?: number }) => (
+  <div
+    className="relative grid place-items-center"
+    style={{ width: size, height: size }}
+    aria-hidden
+  >
+    {/* The sweep sits under the rings so it reads as passing beneath them. */}
+    <svg
+      className="gt-sweep absolute inset-0"
+      width={size}
+      height={size}
+      viewBox="0 0 200 200"
+    >
+      <defs>
+        <linearGradient id="scope-sweep" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor={C.arrived} stopOpacity="0" />
+          <stop offset="100%" stopColor={C.arrived} stopOpacity="0.22" />
+        </linearGradient>
+      </defs>
+      {/* A quarter-turn wedge trailing the beam. */}
+      <path d="M100 100 L100 12 A88 88 0 0 1 188 100 Z" fill="url(#scope-sweep)" />
+      <line x1="100" y1="100" x2="188" y2="100" stroke={C.arrived} strokeOpacity="0.5" strokeWidth="1.5" />
+    </svg>
+
+    <svg className="absolute inset-0" width={size} height={size} viewBox="0 0 200 200">
+      {/* Two range rings, as the full mark has. A third, inner ring was tried
+          and sat close enough to the centre dot to read as a halo. */}
+      <circle cx="100" cy="100" r="88" fill="none" stroke={C.lineStrong} strokeOpacity="0.55" strokeWidth="1.25" />
+      <circle cx="100" cy="100" r="52" fill="none" stroke={C.lineStrong} strokeOpacity="0.35" strokeWidth="1.25" />
+      {/* Cross-hairs, clipped to the outer ring, so the field reads as an
+          instrument rather than a target. */}
+      <line x1="100" y1="12" x2="100" y2="188" stroke={C.line} strokeOpacity="0.6" strokeWidth="1" />
+      <line x1="12" y1="100" x2="188" y2="100" stroke={C.line} strokeOpacity="0.6" strokeWidth="1" />
+
+      {/* You. */}
+      <circle cx="100" cy="100" r="14" fill={C.arrived} fillOpacity="0.16" />
+      <circle cx="100" cy="100" r="6.5" fill={C.arrived} />
+
+      {/* An empty slot rather than a contact: nobody is out there, and this is
+          where the first person will appear. Outlined, not filled, so it does
+          not claim somebody is already on the ring — and present at all
+          because a scope with nothing on it is a bullseye, which is the same
+          reasoning that keeps one contact in the 16px favicon. */}
+      <circle
+        className="gt-breathe"
+        cx="152" cy="62" r="6.5"
+        fill="none" stroke={C.ahead} strokeWidth="1.5" strokeDasharray="3 3"
+      />
+    </svg>
+  </div>
+);
+
 // ─── Screen: Trips ──────────────────────────────────────────────────────────
 
 export const TripsScreen = ({
-  trips, live, loading, hasMore, loadingMore, now, onOpen, onOpenLive, onLoadMore,
+  trips, live, loading, hasMore, loadingMore, now, onOpen, onOpenLive, onLoadMore, onStart,
 }: {
   trips: TripEntry[];
   live: LiveTripEntry[];
@@ -169,22 +236,37 @@ export const TripsScreen = ({
   onOpen: (tripId: string) => void;
   onOpenLive: (shareCode: string) => void;
   onLoadMore: () => void;
+  onStart: () => void;
 }) => {
   const months = groupByMonth(trips, now);
+  const finished = trips.filter((t) => t.kind !== "live");
+  const arrived = finished.filter((t) => outcomeOf(t) === "arrived").length;
+  const empty = !loading && months.length === 0 && live.length === 0;
 
   return (
     <div className="flex flex-col h-full" style={{ paddingTop: PAD_T }}>
-      <div className="px-6" style={{ paddingBottom: 14 }}>
+      <div className="px-6" style={{ paddingBottom: empty ? 0 : 14 }}>
         <ScreenTitle>Your trips</ScreenTitle>
+        {/* A count, not a decoration: it answers "how much is in here" before
+            the reader scrolls, and disappears when the answer is nothing. */}
+        {finished.length > 0 && (
+          <div
+            className="tnum"
+            style={{ fontFamily: FONT.body, fontSize: 13, color: C.muted, marginTop: 4 }}
+          >
+            {finished.length} {finished.length === 1 ? "trip" : "trips"}
+            {arrived > 0 && <> · {arrived} where everyone arrived</>}
+          </div>
+        )}
       </div>
 
       {/* min-h-0 or this refuses to shrink and pushes the tab bar out of frame. */}
       <div
-        className="flex-1 min-h-0 overflow-y-auto px-6"
+        className={`flex-1 min-h-0 overflow-y-auto px-6${empty ? " flex flex-col justify-center" : ""}`}
         style={{ paddingBottom: TAB_BAR_SPACE }}
       >
         {live.length > 0 && (
-          <div style={{ marginBottom: 22 }}>
+          <div style={{ marginBottom: 24 }}>
             <Eyebrow tone={C.arrived}>LIVE NOW</Eyebrow>
             <div className="flex flex-col gap-2" style={{ marginTop: 8 }}>
               {live.map((t) => (
@@ -200,18 +282,82 @@ export const TripsScreen = ({
         )}
 
         {loading && (
-          <div style={{ fontFamily: FONT.body, fontSize: 14, color: C.muted }}>Loading…</div>
+          /* Skeleton rows rather than a spinner: the shape of the answer is
+             already known, and a spinner in the middle of a list tells the
+             reader less than the list's own outline does. */
+          <div aria-hidden>
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3"
+                style={{ minHeight: 60, borderTop: `1px solid ${C.line}`, opacity: 1 - i * 0.28 }}
+              >
+                <span style={{ width: 24 }} />
+                <span className="flex-1">
+                  <span
+                    className="block"
+                    style={{ height: 11, width: "52%", borderRadius: 4, background: C.sunken }}
+                  />
+                  <span
+                    className="block"
+                    style={{ height: 9, width: "34%", borderRadius: 4, background: C.sunken, marginTop: 7 }}
+                  />
+                </span>
+              </div>
+            ))}
+          </div>
         )}
 
-        {!loading && months.length === 0 && live.length === 0 && (
-          <Empty
-            title="No trips yet"
-            body="Trips you take while signed in show up here. Nothing is kept for trips taken signed out."
-          />
+        {empty && (
+          /* Teaches the object and offers the one route out of the state.
+             The old version did neither: it said "nothing here" and stopped,
+             two thirds of the way up an otherwise blank screen. */
+          <div className="flex flex-col items-center text-center" style={{ paddingBottom: 12 }}>
+            <span
+              className="grid place-items-center"
+              style={{
+                width: 56, height: 56, borderRadius: 999,
+                border: `1.5px solid ${C.line}`, color: C.faint,
+              }}
+            >
+              <Route size={24} />
+            </span>
+            <h2
+              style={{
+                fontFamily: FONT.display, fontSize: 20, fontWeight: 500,
+                letterSpacing: "-0.02em", color: C.text, marginTop: 18,
+              }}
+            >
+              No trips yet
+            </h2>
+            <p
+              style={{
+                fontFamily: FONT.body, fontSize: 14, lineHeight: 1.55, color: C.muted,
+                marginTop: 8, maxWidth: 280,
+              }}
+            >
+              Once a trip you were signed in for finishes, it lands here — where
+              it went, who came, and who made it.
+            </p>
+            <div style={{ width: "100%", maxWidth: 300, marginTop: 24 }}>
+              <PrimaryButton onClick={onStart}>
+                Start a trip
+                <ArrowRight size={20} />
+              </PrimaryButton>
+            </div>
+            <p
+              style={{
+                fontFamily: FONT.body, fontSize: 12, lineHeight: 1.5, color: C.muted,
+                marginTop: 16, maxWidth: 280,
+              }}
+            >
+              Nothing is kept for trips taken signed out.
+            </p>
+          </div>
         )}
 
         {months.map((group) => (
-          <div key={group.heading} style={{ marginBottom: 20 }}>
+          <div key={group.heading} style={{ marginBottom: 22 }}>
             <Eyebrow>{group.heading.toUpperCase()}</Eyebrow>
             <div style={{ marginTop: 6 }}>
               {group.trips.map((t) => (
@@ -724,11 +870,16 @@ export const YouScreen = ({
 // ─── Home: the signed-in additions ──────────────────────────────────────────
 
 /**
- * What Home shows above the two buttons once somebody is signed in.
+ * What Home shows once somebody is signed in.
  *
- * Deliberately not a replacement for the landing screen — `Landing` still owns
- * the marketing copy for signed-out visitors, and this sits in front of it
- * rather than forking it.
+ * Built for the empty case first, because that is the case a new account
+ * actually lands in and the one the old layout left as seven hundred pixels of
+ * nothing. It borrows `Landing`'s proven shape — a centred middle that grows,
+ * a fixed stack of actions at the foot — rather than stacking three elements
+ * at the top of a column and letting the rest fall away.
+ *
+ * The greeting is deliberately small. A name is not information; what is
+ * running is, so that gets the size.
  */
 export const HomeDashboard = ({
   name, live, recent, now, onStart, onJoin, onOpenLive, onOpenTrip, onSeeAll,
@@ -742,24 +893,59 @@ export const HomeDashboard = ({
   onOpenLive: (shareCode: string) => void;
   onOpenTrip: (tripId: string) => void;
   onSeeAll: () => void;
-}) => (
-  <div className="flex flex-col h-full" style={{ paddingTop: PAD_T }}>
-    <div className="px-6" style={{ paddingBottom: 16 }}>
-      <ScreenTitle>
-        Welcome back,
-        <br />
-        {name}.
-      </ScreenTitle>
-    </div>
+}) => {
+  const running = live.length > 0;
+  const people = live.reduce((n, t) => n + t.memberCount, 0);
 
+  return (
     <div
-      className="flex-1 min-h-0 overflow-y-auto px-6"
-      style={{ paddingBottom: TAB_BAR_SPACE }}
+      className="flex flex-col h-full px-6"
+      style={{ paddingTop: PAD_T, paddingBottom: TAB_BAR_SPACE }}
     >
-      {live.length > 0 && (
-        <div style={{ marginBottom: 22 }}>
-          <Eyebrow tone={C.arrived}>LIVE NOW</Eyebrow>
-          <div className="flex flex-col gap-2" style={{ marginTop: 8 }}>
+      {/* Identity, then the person — in that order, and both quiet. */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Mark size={18} />
+          <span
+            style={{
+              fontFamily: FONT.display, fontWeight: 600, letterSpacing: "-0.02em",
+              color: C.text, fontSize: 16,
+            }}
+          >
+            {PRODUCT_NAME}
+          </span>
+        </div>
+        <span
+          className="truncate"
+          style={{ fontFamily: FONT.body, fontSize: 13, color: C.muted, maxWidth: "50%" }}
+        >
+          {name}
+        </span>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col justify-center">
+        {running ? (
+          <div className="flex flex-col gap-2" style={{ paddingBlock: 20 }}>
+            <div
+              className="flex items-baseline gap-2"
+              style={{ marginBottom: 4 }}
+            >
+              <span
+                className="gtpulse"
+                style={{ width: 8, height: 8, borderRadius: 999, background: C.arrived }}
+              />
+              <span
+                style={{
+                  fontFamily: FONT.display, fontSize: 22, fontWeight: 500,
+                  letterSpacing: "-0.02em", color: C.text,
+                }}
+              >
+                {live.length === 1 ? "1 trip running" : `${live.length} trips running`}
+              </span>
+              <span className="tnum" style={{ fontFamily: FONT.body, fontSize: 14, color: C.muted }}>
+                {people} {people === 1 ? "person" : "people"}
+              </span>
+            </div>
             {live.map((t) => (
               <LiveTripCard
                 key={t.tripId}
@@ -769,38 +955,74 @@ export const HomeDashboard = ({
               />
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          /* The scope, and the verdict beneath it. Same voice as the group
+             screen: one sentence, and it is about the group rather than you. */
+          <div className="flex flex-col items-center text-center" style={{ paddingBlock: 24 }}>
+            <Scope size={196} />
+            <h1
+              style={{
+                fontFamily: FONT.display, fontSize: 24, fontWeight: 500,
+                letterSpacing: "-0.025em", color: C.text, marginTop: 22,
+              }}
+            >
+              Nothing running
+            </h1>
+            <p
+              style={{
+                fontFamily: FONT.body, fontSize: 14, lineHeight: 1.55, color: C.muted,
+                marginTop: 8, maxWidth: 270,
+              }}
+            >
+              Start a trip and everyone who joins shows up here, live, until it
+              expires.
+            </p>
+          </div>
+        )}
 
-      <div className="flex flex-col gap-3">
+        {recent.length > 0 && (
+          <div style={{ paddingBottom: 8 }}>
+            <div
+              className="flex items-center justify-between"
+              style={{ marginBottom: 2 }}
+            >
+              <Eyebrow>RECENT</Eyebrow>
+              <button
+                onClick={onSeeAll}
+                className="flex items-center gap-0.5"
+                style={{ fontFamily: FONT.body, fontSize: 13, color: C.muted, minHeight: 44 }}
+              >
+                All trips
+                <ChevronRight size={14} />
+              </button>
+            </div>
+            {recent.map((t) => (
+              <TripRow key={t.tripId} trip={t} now={now} onOpen={() => onOpenTrip(t.tripId)} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3" style={{ paddingTop: 8 }}>
         <PrimaryButton onClick={onStart}>
           Start a trip
           <ArrowRight size={20} />
         </PrimaryButton>
         <SecondaryButton onClick={onJoin}>
           Join with a code
-          <ArrowRight size={20} />
+          <CornerDownLeft size={20} />
         </SecondaryButton>
+        {/* The promise, where a signed-in person can still see it. It was only
+            ever on the landing screen, which they no longer get. */}
+        <p
+          style={{
+            fontFamily: FONT.body, fontSize: 12, lineHeight: 1.5, color: C.muted,
+            textAlign: "center", marginTop: 6, marginBottom: 2,
+          }}
+        >
+          Every trip expires in 8 hours and its location data is erased.
+        </p>
       </div>
-
-      {recent.length > 0 && (
-        <div style={{ marginTop: 26 }}>
-          <Eyebrow>RECENT</Eyebrow>
-          <div style={{ marginTop: 6 }}>
-            {recent.map((t) => (
-              <TripRow key={t.tripId} trip={t} now={now} onOpen={() => onOpenTrip(t.tripId)} />
-            ))}
-          </div>
-          <button
-            onClick={onSeeAll}
-            className="flex items-center gap-1"
-            style={{ fontFamily: FONT.body, fontSize: 14, color: C.muted, minHeight: 44 }}
-          >
-            All trips
-            <ChevronRight size={15} />
-          </button>
-        </div>
-      )}
     </div>
-  </div>
-);
+  );
+};

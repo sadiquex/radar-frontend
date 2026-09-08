@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { PhoneFrame } from "../../components/PhoneFrame";
 import { TripDetail } from "../../components/Account";
 import { C, FONT } from "../../components/Radar";
-import { useAccount, useOptimisticSignedIn } from "../../hooks/useAccount";
+import { useAccount } from "../../hooks/useAccount";
 import { history } from "@/lib/data";
 import type { TripEntry } from "@/lib/data/history";
 
@@ -23,7 +23,7 @@ export default function TripDetailPage() {
   const params = useParams<{ tripId: string }>();
   const tripId = params?.tripId ?? "";
   const account = useAccount();
-  const signedIn = useOptimisticSignedIn(account.state);
+  const signedIn = account.state === "signedIn";
 
   const [trip, setTrip] = useState<TripEntry | null>(null);
   const [load, setLoad] = useState<Load>("loading");

@@ -15,8 +15,15 @@ import type { LiveTripEntry, TripEntry } from "@/lib/data/history";
 export function useHistory(enabled: boolean) {
   const [trips, setTrips] = useState<TripEntry[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(enabled && signInAvailable);
+  // `settled` rather than a `loading` seeded from `enabled`: `enabled` is
+  // derived from the account, which is unknown on the server and known on the
+  // client, so seeding from it renders a different tree on each side. That is
+  // a hydration mismatch, and React answers one by discarding the whole server
+  // document. `signInAvailable` is a build-time constant, so it is identical
+  // on both sides.
+  const [settled, setSettled] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const loading = signInAvailable && !settled;
   const alive = useRef(true);
 
   useEffect(() => {
@@ -30,15 +37,14 @@ export function useHistory(enabled: boolean) {
     if (!enabled || !signInAvailable) {
       setTrips([]);
       setCursor(null);
-      setLoading(false);
+      setSettled(true);
       return;
     }
-    setLoading(true);
     const page = await history.list();
     if (!alive.current) return;
     setTrips(page.trips);
     setCursor(page.nextCursor);
-    setLoading(false);
+    setSettled(true);
   }, [enabled]);
 
   useEffect(() => {
@@ -99,12 +105,15 @@ export function useHistory(enabled: boolean) {
  */
 export function useLiveTrips(enabled: boolean) {
   const [live, setLive] = useState<LiveTripEntry[]>([]);
-  const [loading, setLoading] = useState(enabled && signInAvailable);
+  // Same reasoning as above: seeded from a build-time constant, never from
+  // anything the server cannot know.
+  const [settled, setSettled] = useState(false);
+  const loading = signInAvailable && !settled;
 
   useEffect(() => {
     if (!enabled || !signInAvailable) {
       setLive([]);
-      setLoading(false);
+      setSettled(true);
       return;
     }
     let cancelled = false;
@@ -113,7 +122,7 @@ export function useLiveTrips(enabled: boolean) {
       const found = await history.live();
       if (cancelled) return;
       setLive(found);
-      setLoading(false);
+      setSettled(true);
     };
 
     void refresh();

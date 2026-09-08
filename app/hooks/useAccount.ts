@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { account, signInAvailable } from "@/lib/data";
 import { forgetGoogleSession } from "@/lib/googleSignIn";
-import { rememberSignedIn, wasSignedIn } from "@/lib/accountFlag";
+import { rememberSignedIn } from "@/lib/accountFlag";
 import { adoptAccountPreferences } from "@/lib/preferences";
 import type { AccountProfile, AccountPreferences } from "@/lib/data/account";
 
@@ -91,17 +91,6 @@ export function useAccount() {
     rename,
     available: signInAvailable,
   };
-}
-
-/**
- * What the shell should assume before `/auth/me` has answered.
- *
- * Read once, on the first client render. Reading it on every render would make
- * the tab bar flicker if anything else wrote the key mid-session.
- */
-export function useOptimisticSignedIn(state: AccountState): boolean {
-  const [cached] = useState<boolean>(() => wasSignedIn());
-  return state === "loading" ? cached : state === "signedIn";
 }
 
 export type { AccountPreferences };

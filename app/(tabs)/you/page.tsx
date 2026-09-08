@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { YouScreen } from "../../components/Account";
-import { useAccount, useOptimisticSignedIn } from "../../hooks/useAccount";
+import { useAccount } from "../../hooks/useAccount";
 import { account as accountClient, history } from "@/lib/data";
 import { hapticsSupported } from "@/lib/haptics";
 import { applyPreferences, readLocalPreferences, writeLocalPreference } from "@/lib/preferences";
@@ -13,7 +13,7 @@ import type { ThemeChoice } from "@/lib/theme";
 export default function YouPage() {
   const router = useRouter();
   const account = useAccount();
-  const signedIn = useOptimisticSignedIn(account.state);
+  const signedIn = account.state === "signedIn";
 
   const [devices, setDevices] = useState<AccountDevice[]>([]);
   const [local, setLocal] = useState(() => readLocalPreferences());

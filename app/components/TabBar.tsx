@@ -29,7 +29,7 @@ export function TabBar({ active }: { active: TabKey }) {
 
   return (
     <nav
-      className="absolute left-0 right-0 bottom-0 z-30 flex"
+      className="gt-tabbar absolute left-0 right-0 bottom-0 z-30"
       aria-label="Sections"
       style={{
         background: C.ground,

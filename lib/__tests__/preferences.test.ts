@@ -37,6 +37,7 @@ function stubEnv(storage: unknown, prefersDark = false) {
   vi.stubGlobal("document", {
     documentElement: {
       setAttribute: (k: string, v: string) => void (root.attrs[k] = v),
+      removeAttribute: (k: string) => void delete root.attrs[k],
     },
   });
   return root;

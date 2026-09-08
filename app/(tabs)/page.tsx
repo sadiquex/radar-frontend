@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Landing, Create, Share } from "../components/Radar";
 import { HomeDashboard } from "../components/Account";
 import { GoogleSignInButton } from "../components/GoogleSignInButton";
-import { useAccount, useOptimisticSignedIn } from "../hooks/useAccount";
+import { useAccount } from "../hooks/useAccount";
 import { useHistory, useLiveTrips } from "../hooks/useHistory";
 import { useHideTabBar } from "../components/TabBarContext";
 import { data, getIdentity } from "@/lib/data";
@@ -28,7 +28,7 @@ export default function Home() {
   // Only claim we'll hold the screen awake if this browser can actually do it.
   const [wakeSupported, setWakeSupported] = useState(false);
 
-  const signedIn = useOptimisticSignedIn(account.state);
+  const signedIn = account.state === "signedIn";
   const { live } = useLiveTrips(signedIn);
   const { trips } = useHistory(signedIn);
 
@@ -98,7 +98,7 @@ export default function Home() {
 
   return (
     <>
-      {step === "landing" && signedIn && account.profile !== null && (
+      {step === "landing" && account.profile !== null && (
         <HomeDashboard
           name={account.profile.displayName}
           live={live}
@@ -114,13 +114,15 @@ export default function Home() {
 
       {/* The landing screen is still the whole of Home for anyone signed out,
           and for the moment before /auth/me answers on a cold load. */}
-      {step === "landing" && !(signedIn && account.profile !== null) && (
+      {step === "landing" && account.profile === null && (
         <Landing
           onStart={() => setStep("create")}
           onJoin={() => router.push("/join")}
           account={{
             state: account.state,
-            name: account.profile?.displayName ?? null,
+            // Narrowed to null by the branch above; Landing owns the
+            // signed-out state and never needs a name here.
+            name: null,
             available: account.available,
             onSignOut: () => void account.signOut(),
             signInSlot: (

@@ -35,4 +35,31 @@ export function rememberSignedIn(signedIn: boolean): void {
   } catch {
     // A browser with storage blocked simply pays the layout shift.
   }
+  stampSignedIn(signedIn);
 }
+
+/** The attribute the CSS in globals.css keys the tab bar's visibility off. */
+export const SIGNED_IN_ATTR = "data-signed-in";
+
+export function stampSignedIn(signedIn: boolean): void {
+  if (typeof document === "undefined") return;
+  if (signedIn) document.documentElement.setAttribute(SIGNED_IN_ATTR, "1");
+  else document.documentElement.removeAttribute(SIGNED_IN_ATTR);
+}
+
+/**
+ * Stamps the cached flag on `<html>` before first paint.
+ *
+ * This exists because the obvious approach does not work. Rendering the tab
+ * bar only when a localStorage-derived boolean is true means the server
+ * renders no `<nav>` and the client renders one on its very first pass — a
+ * hydration mismatch on every single load. React does not patch that up: it
+ * discards the entire server document and re-renders on the client, which
+ * throws away whatever `THEME_BOOTSTRAP` had just set and makes the theme
+ * toggle look broken.
+ *
+ * So the markup is identical on both sides — the bar is always in the tree —
+ * and only its visibility is decided here, pre-paint, in CSS. Same mechanism
+ * as the theme, and for the same reason.
+ */
+export const SIGNED_IN_BOOTSTRAP = `(function(){try{if(localStorage.getItem("${SIGNED_IN_KEY}")==="1"){document.documentElement.setAttribute("${SIGNED_IN_ATTR}","1")}}catch(e){}})()`;

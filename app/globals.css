@@ -192,6 +192,30 @@ html, body {
   animation: gtrise 0.42s cubic-bezier(0.2, 0, 0, 1) both;
 }
 
+/* The scope's sweep. Only ever runs on an idle Home screen, where it is the
+   state rather than decoration: the radar is empty because nobody is out
+   there. Transform-only, so it stays on the compositor, and the global
+   prefers-reduced-motion block below stops it dead. */
+@keyframes gtsweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.gt-sweep {
+  animation: gtsweep 5s linear infinite;
+  transform-origin: 50% 50%;
+}
+
+/* The contact blip riding the outer ring, in step with the sweep. */
+@keyframes gtbreathe {
+  0%, 100% { opacity: 0.9; }
+  50%      { opacity: 0.35; }
+}
+
+.gt-breathe {
+  animation: gtbreathe 5s ease-in-out infinite;
+}
+
 @keyframes gtsheet {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
@@ -199,6 +223,19 @@ html, body {
 
 .gt-sheet {
   animation: gtsheet 0.22s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+/* The signed-in shell's navigation.
+   Always in the markup, so the server and the client agree; visible only once
+   `data-signed-in` is on <html>, which the pre-paint bootstrap sets from the
+   cached flag and `useAccount` corrects when the real answer arrives. Doing
+   this in React instead cost a hydration mismatch on every load. */
+.gt-tabbar {
+  display: none;
+}
+
+[data-signed-in="1"] .gt-tabbar {
+  display: flex;
 }
 
 .tnum {

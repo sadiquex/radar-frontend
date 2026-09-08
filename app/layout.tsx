@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo, Signika, DM_Mono } from "next/font/google";
 import { THEME_BOOTSTRAP } from "@/lib/theme";
+import { SIGNED_IN_BOOTSTRAP } from "@/lib/accountFlag";
 import "./globals.css";
 
 // Radar is an instrument you read at speed, so the type comes from transport
@@ -79,6 +80,10 @@ export default function RootLayout({
         {/* Runs before first paint so the right theme is already on <html>.
             Without it, a dark-mode user sees a white flash on every load. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        {/* Same idea, one screen later: puts the tab bar on the page before
+            first paint for someone who was signed in last time, without
+            branching the markup and breaking hydration. */}
+        <script dangerouslySetInnerHTML={{ __html: SIGNED_IN_BOOTSTRAP }} />
       </head>
       <body>{children}</body>
     </html>
