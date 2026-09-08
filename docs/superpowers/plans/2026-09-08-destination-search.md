@@ -74,7 +74,7 @@
 
 - [ ] **Step 1: Record the fixture**
 
-Create `backend/src/domain/geocode.fixture.json` with this exact content. It is a real response recorded from `photon.komoot.io` on 8 Sep 2026, trimmed to the three features that matter and with three duplicate "Accra Mall" features appended — the duplicates are what the real service returns for that query.
+Create `backend/src/domain/geocode.fixture.json` with this exact content. It is a real response recorded from `photon.komoot.io` on 8 Sep 2026, trimmed to the three features that matter and with a second duplicate "Accra Mall" feature appended — one place returned as both a node and a way is what the real service does, and two is enough to prove the dedupe.
 
 ```json
 {
@@ -357,7 +357,7 @@ export function featuresToPlaces(body: unknown): Place[] {
 - [ ] **Step 5: Run the test and watch it pass**
 
 Run: `cd backend && npx vitest run src/domain/geocode.test.ts && npx tsc --noEmit`
-Expected: 10 passing, typecheck clean.
+Expected: 11 passing (the test block below has eleven `it()` cases), typecheck clean.
 
 **Note on the Ghana check:** the implementation tests `detail.endsWith("Ghana")` rather than `countrycode`, because `detail` is what the test asserts and what a reader sees. If you prefer keying on `countrycode === "GH"`, that is equally correct — but then a feature with a country code and no other locality field ranks first with a `detail` of `"Ghana"`, which is fine. Pick one and make the test say which.
 
@@ -1114,7 +1114,7 @@ And in `backend/src/server.ts`, pass the configured URL where `createApp` is cal
 - [ ] **Step 7: Run the tests and watch them pass**
 
 Run: `cd backend && npx vitest run tests/api.geocode.test.ts && npm test && npx tsc --noEmit`
-Expected: 6 passing in the new file; the whole backend suite at 536 + 30 = **566** (10 from Task 1, 5 from Task 2, 9 from Task 3, 6 here); typecheck clean.
+Expected: 6 passing in the new file; the whole backend suite at 536 + 31 = **567** (11 from Task 1, 5 from Task 2, 9 from Task 3, 6 here); typecheck clean.
 
 - [ ] **Step 8: Commit**
 
@@ -1982,7 +1982,7 @@ cd frontend && npx tsc --noEmit && npm test && npm run lint && npm run build
 
 `npm run build` is safe here **only if no dev server is running** — stop it first.
 
-Expected: backend **566** passing. Frontend: everything passing with typecheck, lint and
+Expected: backend **567** passing. Frontend: everything passing with typecheck, lint and
 build clean — the exact count is a function of the component directory after Task 7, so read
 it rather than checking it against a number written here.
 
