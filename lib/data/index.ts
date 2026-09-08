@@ -12,6 +12,8 @@ import { createAccountClient, offlineAccount } from "./account";
 import type { AccountClient } from "./account";
 import { createHistoryClient, offlineHistory } from "./history";
 import type { HistoryClient } from "./history";
+import { createGeocodeClient, offlineGeocode } from "./geocode";
+import type { GeocodeClient } from "./geocode";
 import type { DataClient } from "./types";
 import type { StorageLike } from "./local";
 
@@ -39,6 +41,7 @@ function createApiClient(baseUrl: string): {
   notifications: NotificationsClient;
   account: AccountClient;
   history: HistoryClient;
+  geocode: GeocodeClient;
 } {
   const session = createSessionStore({
     storage: getStorage(),
@@ -67,6 +70,7 @@ function createApiClient(baseUrl: string): {
     notifications: createNotificationsClient({ baseUrl, session }),
     account: createAccountClient({ baseUrl, session }),
     history: createHistoryClient({ baseUrl, session }),
+    geocode: createGeocodeClient({ baseUrl, session }),
   };
 }
 
@@ -78,6 +82,7 @@ function createOfflineClient(): {
   notifications: NotificationsClient;
   account: AccountClient;
   history: HistoryClient;
+  geocode: GeocodeClient;
 } {
   const data = createLocalAsyncData({
     storage: getStorage(),
@@ -92,6 +97,7 @@ function createOfflineClient(): {
     notifications: offlineNotifications,
     account: offlineAccount,
     history: offlineHistory,
+    geocode: offlineGeocode,
   };
 }
 
@@ -120,6 +126,9 @@ export const account = active.account;
  * without an API there are no accounts and therefore no history.
  */
 export const history = active.history;
+
+/** Destination search. Finds nothing when running offline. */
+export const geocode = active.geocode;
 
 /** Empty when push is not configured; the bell falls back to tab-only alerts. */
 export const vapidPublicKey = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "").trim();

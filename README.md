@@ -19,7 +19,7 @@ Open http://localhost:3000
 
 ### Try the whole experience solo
 
-1. **Create a trip** (optionally pin a destination on the map).
+1. **Create a trip** (optionally set a destination — type it and choose a suggestion, or pin it on the map).
 2. On the group screen, allow location when prompted, then tap **"Preview with a demo convoy"** — scripted members move toward the destination so you can see statuses, the horizon, the map, and notifications come alive.
 3. To test real multi-device sync, open the **join link** in a second tab/incognito window — members appear live across tabs.
 
@@ -50,6 +50,7 @@ app/
     PhoneFrame.tsx          Phone-shaped shell (full screen on mobile, device frame on desktop)
     JoinFlow.tsx            Shared join logic for both join routes
     LiveMap.tsx             MapLibre GL map (OSM tiles) — live pins + destination picker
+    DestinationSearch.tsx   Destination combobox — a suggestion sets the name and the pin together
   hooks/
     useGeolocation.ts       watchPosition wrapper → speed-aware writes to the data layer
     useWakeLock.ts          Holds the screen awake while a trip is live
@@ -83,8 +84,25 @@ The entire app talks to one interface: the `data` singleton (`lib/data/index.ts`
 | Screen wake lock | Real where supported (iOS 16.4+, most Android); a silent no-op elsewhere |
 | Light / dark themes | Real — light default, follows the system preference, manual override in ⋯ |
 | Persistence / multi-device across the internet | Deferred — needs Supabase (currently per-browser localStorage) |
-| Geocoding (destination name → coordinates) | Deferred — set the destination via the map picker for now |
+| Geocoding (destination name → coordinates) | Real — type in the Create screen's destination field and choose a suggestion; sets the name and the pin together. Needs an API (`GET /v1/geocode`, proxying Photon); offline, search finds nothing and the picker is the only path |
 | Trip expiry job, RLS, PWA install | Deferred — see the roadmap |
+
+### The destination field
+
+Typing in it searches. Three characters minimum, debounced 250ms, and choosing
+a suggestion sets **both** the name and the map pin — before this they were two
+independent fields, so a trip could be named "Kotoka Airport" and pinned in the
+wrong suburb without complaint.
+
+Moving the pin afterwards deliberately keeps the name. Somebody who searched
+Kotoka Airport meant Kotoka Airport; they are correcting exactly where it is,
+not changing their mind about where they are going.
+
+It is strictly additive. A search that fails, a rate limit, an API asleep on a
+cold start, or no `NEXT_PUBLIC_API_URL` at all — every one of them leaves the
+screen exactly as it was before the feature existed: type a name, drop a pin.
+There is no state in which a third party's availability stops somebody starting
+a trip.
 
 ## Design system
 
