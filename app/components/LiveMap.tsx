@@ -17,7 +17,7 @@ export interface MapMarker {
 
 // Free OpenStreetMap raster tiles — fine for a frontend prototype. Swap for a
 // keyed vector provider before production traffic.
-const OSM_STYLE: StyleSpecification = {
+export const OSM_STYLE: StyleSpecification = {
   version: 8,
   sources: {
     osm: {

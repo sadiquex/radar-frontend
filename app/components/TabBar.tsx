@@ -1,14 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Home, Route, User } from "lucide-react";
+import { Home, Route, User, Wrench } from "lucide-react";
 import { C, FONT } from "./Radar";
 
-export type TabKey = "home" | "trips" | "you";
+export type TabKey = "home" | "trips" | "repairs" | "you";
 
 const TABS: { key: TabKey; href: string; label: string; icon: typeof Home }[] = [
   { key: "home", href: "/", label: "Home", icon: Home },
   { key: "trips", href: "/trips", label: "Trips", icon: Route },
+  // Sits before "You" rather than after it: the first three are things you do,
+  // the last is who you are, and a settings tab in the middle of that reads as
+  // a mis-tap waiting to happen.
+  { key: "repairs", href: "/repairs", label: "Repairs", icon: Wrench },
   { key: "you", href: "/you", label: "You", icon: User },
 ];
 

@@ -21,6 +21,7 @@ import { stampSignedIn } from "@/lib/accountFlag";
 
 const TAB_FOR_PATH = (pathname: string): TabKey => {
   if (pathname.startsWith("/trips")) return "trips";
+  if (pathname.startsWith("/repairs")) return "repairs";
   if (pathname.startsWith("/you")) return "you";
   return "home";
 };

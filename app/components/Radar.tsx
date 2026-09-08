@@ -102,8 +102,8 @@ const GLYPH_FONT = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
 // Safe-area composites. Mobile is the tuned case, so every screen edge goes
 // through one of these rather than a bare padding value.
-const PAD_T = "calc(var(--safe-t) + 14px)";
-const PAD_B = "calc(var(--safe-b) + 16px)";
+export const PAD_T = "calc(var(--safe-t) + 14px)";
+export const PAD_B = "calc(var(--safe-b) + 16px)";
 
 // Colour alone cannot carry status: five statuses that all pass AA on one
 // ground are forced into a narrow luminance band, so they collide in greyscale
