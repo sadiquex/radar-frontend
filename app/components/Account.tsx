@@ -480,6 +480,19 @@ export const YouScreen = ({
   const [draft, setDraft] = useState(name);
   const [clearing, setClearing] = useState(false);
 
+  // The account arrives a round trip after this first renders, so `name` starts
+  // as "" and `useState(name)` would capture that and never let go — the field
+  // sat permanently empty. Adjusting state during render when a prop changes is
+  // React's own answer to this; an effect would paint the empty field first.
+  //
+  // It also resets an in-flight edit if the name changes underneath, which only
+  // happens right after a successful save, where the draft already matches.
+  const [syncedName, setSyncedName] = useState(name);
+  if (name !== syncedName) {
+    setSyncedName(name);
+    setDraft(name);
+  }
+
   const trimmed = draft.trim();
   const dirty = trimmed !== name && trimmed.length >= 1 && trimmed.length <= 24;
 

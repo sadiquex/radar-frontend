@@ -107,6 +107,53 @@ describe("theme declaration hygiene", () => {
 });
 
 // ─── Type scale ─────────────────────────────────────────────────────────────
+/**
+ * Extracts whole `<Name ... />` elements, nested JSX and all.
+ *
+ * A regex cannot do this: `/<Row[\s\S]*?\/>/` stops at the first `/>` it
+ * finds, which is almost always an icon inside the element rather than the
+ * element's own close. Walking the braces is the only way to know where the
+ * element actually ends.
+ */
+/**
+ * Whether an element sets a prop *itself*, as opposed to somewhere inside one.
+ *
+ * The devices row passes `right={<button onClick={…}>Sign out</button>}` — a
+ * plain `/onClick=/` over the whole element sees that inner handler and reports
+ * a row that is not clickable at all. Only depth zero is the element's own
+ * props.
+ */
+function hasOwnProp(markup: string, prop: string): boolean {
+  let depth = 0;
+  for (let i = 0; i < markup.length; i += 1) {
+    const c = markup[i]!;
+    if (c === "{") depth += 1;
+    else if (c === "}") depth -= 1;
+    else if (depth === 0 && markup.startsWith(`${prop}=`, i)) return true;
+  }
+  return false;
+}
+
+function jsxElements(src: string, name: string): string[] {
+  const found: string[] = [];
+  const open = new RegExp(`<${name}\\b`, "g");
+  let match: RegExpExecArray | null;
+
+  while ((match = open.exec(src)) !== null) {
+    let depth = 0;
+    for (let i = match.index; i < src.length; i += 1) {
+      const c = src[i]!;
+      if (c === "{") depth += 1;
+      else if (c === "}") depth -= 1;
+      else if (depth === 0 && c === "/" && src[i + 1] === ">") {
+        found.push(src.slice(match.index, i + 2));
+        break;
+      }
+    }
+  }
+  return found;
+}
+
 describe("type scale floor", () => {
   // Discovered, not listed. The hand-written list was ["Radar.tsx",
   // "PhoneFrame.tsx", "JoinFlow.tsx"], so every screen added after it was
@@ -128,6 +175,33 @@ describe("type scale floor", () => {
       .filter((n) => n < 12);
     // 9px distance labels on the horizon were the whole reason for this pass.
     expect(tooSmall).toEqual([]);
+  });
+
+  it("never puts a button inside a clickable Row", () => {
+    // Found by running the app, not by any test here. `Row` renders a <button>
+    // when it has an onClick, and a <button> inside a <button> is invalid HTML:
+    // React does not merely warn, hydration fails and the server's markup for
+    // the entire document is discarded and re-rendered on the client.
+    //
+    // A row with anything interactive in `right` must leave `onClick` off and
+    // let its contents own the interaction.
+    const rows = SCREENS.flatMap((file) =>
+      jsxElements(readFileSync(join(componentsDir, file), "utf8"), "Row").map((markup) => ({
+        file,
+        markup,
+      }))
+    );
+
+    // A guard that matches nothing passes forever. The first version of this
+    // used /<Row[\s\S]*?\/>/ and stopped at the first inner `/>` — an icon —
+    // so it found eight rows and thought none of them was clickable.
+    expect(rows.length).toBeGreaterThan(5);
+    expect(rows.filter((r) => hasOwnProp(r.markup, "onClick")).length).toBeGreaterThan(0);
+
+    const offenders = rows
+      .filter((r) => hasOwnProp(r.markup, "onClick") && /<button\b/.test(r.markup))
+      .map((r) => `${r.file}:\n${r.markup}`);
+    expect(offenders).toEqual([]);
   });
 
   it("keeps text inputs at 16px or above, or iOS zooms the viewport on focus", () => {

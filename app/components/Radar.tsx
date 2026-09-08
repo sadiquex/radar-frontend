@@ -1452,6 +1452,19 @@ export const Group = ({
 // ─── Trip options sheet ─────────────────────────────────────────────────────
 // Everything that isn't "look at the group" lives here — including End/Leave,
 // which used to sit 5px from the Map button where a jolt could end the trip.
+/**
+ * A settings row.
+ *
+ * Renders a `<button>` only when it has an `onClick`, and a plain `<div>`
+ * otherwise. Two reasons, and the second one is load-bearing:
+ *
+ *  - A row with no handler should not be announced as a button you can press.
+ *  - A row that *is* a button cannot contain one. Nesting them is invalid HTML,
+ *    and React does not merely warn: hydration fails and the server's markup for
+ *    the whole document is thrown away and re-rendered on the client. So a row
+ *    with anything interactive in `right` — a segmented control, a "sign out"
+ *    link — must leave `onClick` off and let its contents own the interaction.
+ */
 export const Row = ({
   icon, label, detail, onClick, tone = C.text, right,
 }: {
@@ -1461,8 +1474,10 @@ export const Row = ({
   onClick?: () => void;
   tone?: string;
   right?: React.ReactNode;
-}) => (
-  <button
+}) => {
+  const Tag = onClick === undefined ? "div" : "button";
+  return (
+  <Tag
     onClick={onClick}
     className="w-full flex items-center gap-3 text-left transition-colors"
     style={{ minHeight: 56, color: tone, borderTop: `1px solid ${C.line}` }}
@@ -1479,8 +1494,9 @@ export const Row = ({
       )}
     </span>
     {right}
-  </button>
-);
+  </Tag>
+  );
+};
 
 export const Switch = ({ on }: { on: boolean }) => (
   <span

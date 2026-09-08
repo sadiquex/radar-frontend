@@ -159,7 +159,13 @@ export function createAccountClient(deps: AccountDeps): AccountClient {
       // Deliberately silent. The setting has already been applied locally and
       // is already visible; a toast about a failed sync is noise about
       // something the person cannot act on.
-      await send("/v1/me/preferences", { method: "PUT", body: patch }).catch(() => undefined);
+      // Silent for the user — the setting has already applied and is already
+      // visible — but not silent in the console. A bare `.catch(() => undefined)`
+      // here hid a CORS preflight failure that stopped preferences syncing at
+      // all, and nothing in the UI could have shown it.
+      await send("/v1/me/preferences", { method: "PATCH", body: patch }).catch((err) => {
+        console.warn("[radar] could not sync preferences", err);
+      });
     },
   };
 }
