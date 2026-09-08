@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const root = join(__dirname, "..", "..");
@@ -108,10 +108,21 @@ describe("theme declaration hygiene", () => {
 
 // ─── Type scale ─────────────────────────────────────────────────────────────
 describe("type scale floor", () => {
-  const SCREENS = ["Radar.tsx", "PhoneFrame.tsx", "JoinFlow.tsx"];
+  // Discovered, not listed. The hand-written list was ["Radar.tsx",
+  // "PhoneFrame.tsx", "JoinFlow.tsx"], so every screen added after it was
+  // written — TabBar and the account screens among them — was silently
+  // unguarded, and the <input> rule below only ever looked at Radar.tsx while
+  // the one text input somebody would actually get wrong lived elsewhere.
+  const componentsDir = join(root, "app", "components");
+  const SCREENS = readdirSync(componentsDir).filter((f) => f.endsWith(".tsx"));
+
+  it("finds the screen components", () => {
+    // A glob that matches nothing passes every assertion under it.
+    expect(SCREENS.length).toBeGreaterThan(3);
+  });
 
   it.each(SCREENS)("has no type below 12px in %s", (file) => {
-    const src = readFileSync(join(root, "app", "components", file), "utf8");
+    const src = readFileSync(join(componentsDir, file), "utf8");
     const tooSmall = [...src.matchAll(/fontSize:\s*(\d+)/g)]
       .map((m) => Number(m[1]))
       .filter((n) => n < 12);
@@ -120,13 +131,15 @@ describe("type scale floor", () => {
   });
 
   it("keeps text inputs at 16px or above, or iOS zooms the viewport on focus", () => {
-    const src = readFileSync(join(root, "app", "components", "Radar.tsx"), "utf8");
-    const inputs = src.match(/<input[\s\S]{0,900}?\/>/g) ?? [];
+    const inputs = SCREENS.flatMap((file) => {
+      const src = readFileSync(join(componentsDir, file), "utf8");
+      return (src.match(/<input[\s\S]{0,900}?\/>/g) ?? []).map((markup) => ({ file, markup }));
+    });
     expect(inputs.length).toBeGreaterThan(0);
-    for (const input of inputs) {
-      const size = input.match(/fontSize:\s*(\d+)/);
-      expect(size, `an <input> has no explicit fontSize:\n${input}`).not.toBeNull();
-      expect(Number(size![1])).toBeGreaterThanOrEqual(16);
+    for (const { file, markup } of inputs) {
+      const size = markup.match(/fontSize:\s*(\d+)/);
+      expect(size, `an <input> in ${file} has no explicit fontSize:\n${markup}`).not.toBeNull();
+      expect(Number(size![1]), `an <input> in ${file} is below 16px`).toBeGreaterThanOrEqual(16);
     }
   });
 });

@@ -108,7 +108,7 @@ const PAD_B = "calc(var(--safe-b) + 16px)";
 // Colour alone cannot carry status: five statuses that all pass AA on one
 // ground are forced into a narrow luminance band, so they collide in greyscale
 // and for colourblind users. The glyph is the channel; colour reinforces it.
-const STATUS: Record<
+export const STATUS: Record<
   StatusKey,
   { color: string; soft: string; glyph: string; label: string; hint: string }
 > = {
@@ -134,7 +134,7 @@ const fmtSeen = (s: number) =>
 
 // Every icon-only control is a 44px box. Bare 20px glyphs are unhittable with
 // cold hands on a moving bike.
-const IconButton = ({
+export const IconButton = ({
   onClick, label, children, tone = C.muted, size = 44,
 }: {
   onClick?: () => void;
@@ -153,7 +153,7 @@ const IconButton = ({
   </button>
 );
 
-const Glyph = ({ s, size = 12 }: { s: StatusKey; size?: number }) => (
+export const Glyph = ({ s, size = 12 }: { s: StatusKey; size?: number }) => (
   <span
     aria-hidden
     style={{ fontFamily: GLYPH_FONT, fontWeight: 600, fontSize: size, lineHeight: 1 }}
@@ -162,7 +162,7 @@ const Glyph = ({ s, size = 12 }: { s: StatusKey; size?: number }) => (
   </span>
 );
 
-const StatusPill = ({ s }: { s: StatusKey }) => (
+export const StatusPill = ({ s }: { s: StatusKey }) => (
   <span
     className="inline-flex items-center gap-1.5 rounded-full"
     style={{
@@ -178,7 +178,7 @@ const StatusPill = ({ s }: { s: StatusKey }) => (
   </span>
 );
 
-const Avatar = ({ m, size = 42, ring = false }: { m: Member; size?: number; ring?: boolean }) => (
+export const Avatar = ({ m, size = 42, ring = false }: { m: Member; size?: number; ring?: boolean }) => (
   <div
     className="grid place-items-center shrink-0"
     style={{
@@ -197,7 +197,7 @@ const Avatar = ({ m, size = 42, ring = false }: { m: Member; size?: number; ring
 );
 
 // A status badge pinned to an avatar, for the horizon.
-const AvatarWithStatus = ({ m, size = 32 }: { m: Member; size?: number }) => (
+export const AvatarWithStatus = ({ m, size = 32 }: { m: Member; size?: number }) => (
   <div style={{ position: "relative" }}>
     <Avatar m={m} size={size} ring={m.you} />
     {m.located && (
@@ -328,7 +328,7 @@ const QrScanner = ({
   );
 };
 
-const PrimaryButton = ({
+export const PrimaryButton = ({
   onClick, children, disabled = false, tone,
 }: {
   onClick?: () => void;
@@ -353,7 +353,7 @@ const PrimaryButton = ({
   </button>
 );
 
-const SecondaryButton = ({
+export const SecondaryButton = ({
   onClick, children,
 }: { onClick?: () => void; children: React.ReactNode }) => (
   <button
@@ -373,13 +373,13 @@ const SecondaryButton = ({
   </button>
 );
 
-const Eyebrow = ({ children, tone = C.muted }: { children: React.ReactNode; tone?: string }) => (
+export const Eyebrow = ({ children, tone = C.muted }: { children: React.ReactNode; tone?: string }) => (
   <div style={{ fontFamily: FONT.mono, fontSize: 12, color: tone, letterSpacing: "0.1em" }}>
     {children}
   </div>
 );
 
-const Field = ({
+export const Field = ({
   label, children,
 }: { label: string; children: React.ReactNode }) => (
   <label className="block">
@@ -599,8 +599,8 @@ export const Landing = ({
       <p
         style={{ fontFamily: FONT.body, color: C.muted, fontSize: 15, lineHeight: 1.5, marginTop: 20 }}
       >
-        Temporary location sharing for groups moving together. No account needed. No app to
-        install. Expires in 8 hours.
+        Temporary location sharing for groups moving together. Join in seconds — no app to
+        install. Every trip expires in 8 hours.
       </p>
     </div>
 
@@ -614,8 +614,9 @@ export const Landing = ({
         <CornerDownLeft size={20} />
       </SecondaryButton>
 
-      {/* Signing in only saves re-typing a name, so it sits under the two
-          things people came here to do rather than above them. */}
+      {/* Signing in now buys a trip history and settings that follow you, but
+          it is still optional and still sits under the two things people came
+          here to do rather than above them. */}
       {account?.state === "signedIn" && account.name !== null && (
         <div
           className="flex items-center justify-between"
@@ -646,7 +647,7 @@ export const Landing = ({
           <span
             style={{ fontFamily: FONT.body, fontSize: 12, color: C.muted, textAlign: "center" }}
           >
-            Optional — it just saves typing your name each trip.
+            Optional. Keeps your trip history, your name and your settings across devices.
           </span>
         </div>
       )}
@@ -1451,7 +1452,7 @@ export const Group = ({
 // ─── Trip options sheet ─────────────────────────────────────────────────────
 // Everything that isn't "look at the group" lives here — including End/Leave,
 // which used to sit 5px from the Map button where a jolt could end the trip.
-const Row = ({
+export const Row = ({
   icon, label, detail, onClick, tone = C.text, right,
 }: {
   icon: React.ReactNode;
@@ -1481,7 +1482,7 @@ const Row = ({
   </button>
 );
 
-const Switch = ({ on }: { on: boolean }) => (
+export const Switch = ({ on }: { on: boolean }) => (
   <span
     aria-hidden
     style={{
@@ -1783,7 +1784,7 @@ export const GlanceView = ({
 };
 
 // ─── Screen: Member ─────────────────────────────────────────────────────────
-const Stat = ({ label, value }: { label: string; value: string }) => (
+export const Stat = ({ label, value }: { label: string; value: string }) => (
   <div className="rounded-2xl" style={{ background: C.raised, border: `1px solid ${C.line}`, padding: 14 }}>
     <Eyebrow>{label}</Eyebrow>
     <div
@@ -1953,8 +1954,8 @@ export const MapView = ({
 
 // ─── Screen: Ended ──────────────────────────────────────────────────────────
 export const Ended = ({
-  memberCount, onRestart,
-}: { memberCount: number; onRestart: () => void }) => (
+  memberCount, onRestart, saved = false,
+}: { memberCount: number; onRestart: () => void; saved?: boolean }) => (
   <div
     className="flex flex-col h-full px-6 items-center text-center"
     style={{ paddingTop: PAD_T, paddingBottom: PAD_B }}
@@ -1980,7 +1981,8 @@ export const Ended = ({
       <p
         style={{ fontFamily: FONT.body, fontSize: 15, color: C.muted, marginTop: 8, maxWidth: 300, lineHeight: 1.5 }}
       >
-        Locations have stopped updating. Trip data is no longer shared.
+        Locations have stopped updating and are being erased.
+        {saved && " This trip is saved to your trips."}
       </p>
       <div style={{ width: 180, marginTop: 26 }}>
         <Stat label="MEMBERS" value={String(memberCount)} />

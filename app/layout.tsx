@@ -40,7 +40,7 @@ const mono = DM_Mono({
 export const metadata: Metadata = {
   title: "Radar",
   description:
-    "Temporary location sharing for groups moving together. No accounts, no downloads.",
+    "Temporary location sharing for groups moving together. Join in seconds, no install. Trips expire in 8 hours.",
   // Installability is not a growth feature here: iOS Safari delivers Web Push
   // only to a PWA added to the Home Screen, so on iPhone this is the
   // difference between having screen-off alerts and not.

@@ -1,6 +1,6 @@
 # Radar
 
-Temporary location sharing for groups moving together. No accounts, no app install, expires in 8 hours.
+Temporary location sharing for groups moving together. Join in seconds, no app install, trips expire in 8 hours. Signing in is optional and adds a trip history.
 
 Next.js 14 (App Router) + TypeScript + Tailwind + MapLibre. **The frontend flow is fully functional** — create a trip, share a link, join, share live location, and watch who's ahead / behind / with the group / stopped / arrived. It runs entirely in the browser today on a local data layer; the backend (Supabase) is deferred and slots in without changing the UI.
 

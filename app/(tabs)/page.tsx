@@ -2,18 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PhoneFrame } from "./components/PhoneFrame";
-import { Landing, Create, Share } from "./components/Radar";
-import { GoogleSignInButton } from "./components/GoogleSignInButton";
-import { useAccount } from "./hooks/useAccount";
+import { Landing, Create, Share } from "../components/Radar";
+import { HomeDashboard } from "../components/Account";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { useAccount, useOptimisticSignedIn } from "../hooks/useAccount";
+import { useHistory, useLiveTrips } from "../hooks/useHistory";
+import { useHideTabBar } from "../components/TabBarContext";
 import { data, getIdentity } from "@/lib/data";
 import type { Trip } from "@/lib/types";
 
 type Step = "landing" | "create" | "share";
 
+/** How many finished trips the dashboard peeks at before "All trips". */
+const RECENT_ROWS = 3;
+
 export default function Home() {
   const router = useRouter();
   const account = useAccount();
+  const tabBar = useHideTabBar();
   const [step, setStep] = useState<Step>("landing");
   const [trip, setTrip] = useState<Trip | null>(null);
   const [memberCount, setMemberCount] = useState(0);
@@ -22,9 +28,20 @@ export default function Home() {
   // Only claim we'll hold the screen awake if this browser can actually do it.
   const [wakeSupported, setWakeSupported] = useState(false);
 
+  const signedIn = useOptimisticSignedIn(account.state);
+  const { live } = useLiveTrips(signedIn);
+  const { trips } = useHistory(signedIn);
+
   useEffect(() => {
     setWakeSupported(typeof navigator !== "undefined" && "wakeLock" in navigator);
   }, []);
+
+  // Create and Share own the whole viewport — a form with a bottom CTA, and a
+  // share code — so the shell's tab bar stands down for them.
+  useEffect(() => {
+    tabBar.setHidden(step !== "landing");
+    return () => tabBar.setHidden(false);
+  }, [step, tabBar]);
 
   // While on the Share screen, show people arriving.
   //
@@ -77,9 +94,27 @@ export default function Home() {
   const shareUrl =
     trip && typeof window !== "undefined" ? `${window.location.origin}/t/${trip.shareCode}/join` : "";
 
+  const recent = trips.filter((t) => t.kind !== "live").slice(0, RECENT_ROWS);
+
   return (
-    <PhoneFrame>
-      {step === "landing" && (
+    <>
+      {step === "landing" && signedIn && account.profile !== null && (
+        <HomeDashboard
+          name={account.profile.displayName}
+          live={live}
+          recent={recent}
+          now={Date.now()}
+          onStart={() => setStep("create")}
+          onJoin={() => router.push("/join")}
+          onOpenLive={(shareCode) => router.push(`/t/${shareCode}`)}
+          onOpenTrip={(tripId) => router.push(`/trips/${tripId}`)}
+          onSeeAll={() => router.push("/trips")}
+        />
+      )}
+
+      {/* The landing screen is still the whole of Home for anyone signed out,
+          and for the moment before /auth/me answers on a cold load. */}
+      {step === "landing" && !(signedIn && account.profile !== null) && (
         <Landing
           onStart={() => setStep("create")}
           onJoin={() => router.push("/join")}
@@ -94,6 +129,7 @@ export default function Home() {
           }}
         />
       )}
+
       {step === "create" && (
         <Create
           onBack={() => setStep("landing")}
@@ -112,6 +148,6 @@ export default function Home() {
           onOpen={() => router.push(`/t/${trip.shareCode}`)}
         />
       )}
-    </PhoneFrame>
+    </>
   );
 }

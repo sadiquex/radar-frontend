@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { account, signInAvailable } from "@/lib/data";
 import { forgetGoogleSession } from "@/lib/googleSignIn";
-import type { AccountProfile } from "@/lib/data/account";
+import { rememberSignedIn, wasSignedIn } from "@/lib/accountFlag";
+import { adoptAccountPreferences } from "@/lib/preferences";
+import type { AccountProfile, AccountPreferences } from "@/lib/data/account";
 
 export type AccountState = "loading" | "signedOut" | "signedIn";
 
@@ -28,6 +30,8 @@ export function useAccount() {
       if (!alive.current) return;
       setProfile(found);
       setState(found === null ? "signedOut" : "signedIn");
+      // Keeps the pre-hydration shell honest on the next load.
+      rememberSignedIn(found !== null);
     });
 
     return () => {
@@ -39,6 +43,10 @@ export function useAccount() {
     setError(null);
     try {
       const found = await account.signInWithGoogle(idToken);
+      rememberSignedIn(true);
+      // Take on whatever this account was set up with. This is the whole point
+      // of storing preferences: a new phone should arrive configured.
+      adoptAccountPreferences(await account.preferences());
       if (!alive.current) return;
       setProfile(found);
       setState("signedIn");
@@ -56,10 +64,44 @@ export function useAccount() {
     setProfile(null);
     setState("signedOut");
     setError(null);
+    rememberSignedIn(false);
     // Without this Google can hand the button the same account straight back.
     forgetGoogleSession();
     await account.signOut();
   }, []);
 
-  return { profile, state, error, signIn, signOut, available: signInAvailable };
+  /**
+   * Renames the account.
+   *
+   * Honest about failing, like sign-in and for the same reason: the person is
+   * watching a field they just typed into.
+   */
+  const rename = useCallback(async (displayName: string) => {
+    const updated = await account.rename(displayName);
+    if (!alive.current) return;
+    setProfile(updated);
+  }, []);
+
+  return {
+    profile,
+    state,
+    error,
+    signIn,
+    signOut,
+    rename,
+    available: signInAvailable,
+  };
 }
+
+/**
+ * What the shell should assume before `/auth/me` has answered.
+ *
+ * Read once, on the first client render. Reading it on every render would make
+ * the tab bar flicker if anything else wrote the key mid-session.
+ */
+export function useOptimisticSignedIn(state: AccountState): boolean {
+  const [cached] = useState<boolean>(() => wasSignedIn());
+  return state === "loading" ? cached : state === "signedIn";
+}
+
+export type { AccountPreferences };

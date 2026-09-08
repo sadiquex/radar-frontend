@@ -5,6 +5,7 @@
     "length": 6
   },
   "movedThresholdM": 20,
+  "arriveRadiusM": 100,
   "tripTtlMs": 28800000,
   "positionWrite": {
     "minIntervalMs": 20000,

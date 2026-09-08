@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import contract from "../../contract.json";
 import { generateShareCode, SHARE_CODE_ALPHABET } from "../shareCode";
 import { haversineMeters, shouldWritePosition } from "../geo";
+import { computeStatuses } from "../status";
 import { diffStatuses } from "../notify";
 import { createLocalData } from "../data/local";
 import type { StatusKey } from "../types";
@@ -87,6 +88,36 @@ describe("contract.json conformance", () => {
     });
     expect(moved.lastMovedAt).not.toBe(movingAt);
     expect(moved.lastMovedAt).toBe(clock);
+  });
+
+  it("calls somebody arrived at the shared radius", () => {
+    // Behavioural pin on ARRIVE_RADIUS_M, which is module-private.
+    //
+    // This one crosses the network boundary in a way the others do not. Arrival
+    // is derived here on every render during a trip, and derived *again* on the
+    // server exactly once — by the purge sweep's snapshot pass, at the moment
+    // the trip's location data is erased. If the two radii drift, somebody's
+    // history disagrees with what their group watched happen, and there is no
+    // longer any data left to work out which one was right.
+    const degreesFor = (metres: number) => metres / 111_195;
+    const at = (metres: number) => [
+      {
+        id: "rider",
+        tripId: "t",
+        displayName: "Rider",
+        latitude: ACCRA.lat + degreesFor(metres),
+        longitude: ACCRA.lng,
+        status: null,
+        lastMovedAt: null,
+        lastSeenAt: 0,
+      },
+    ];
+
+    const inside = computeStatuses(at(contract.arriveRadiusM - 1), ACCRA, 0);
+    expect(inside.rider!.status).toBe("arrived");
+
+    const outside = computeStatuses(at(contract.arriveRadiusM + 1), ACCRA, 0);
+    expect(outside.rider!.status).not.toBe("arrived");
   });
 
   it("writes positions on the shared cadence and distance", () => {

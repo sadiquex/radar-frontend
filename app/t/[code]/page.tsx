@@ -7,6 +7,7 @@ import {
   Group, MemberView, MapView, Ended, Toast, MenuSheet, GlanceView,
   memberFromParticipant, C, FONT, type Member,
 } from "../../components/Radar";
+import { useAccount } from "../../hooks/useAccount";
 import { useGeolocation } from "../../hooks/useGeolocation";
 import { useWakeLock } from "../../hooks/useWakeLock";
 import { data, getIdentity, notifications, vapidPublicKey } from "@/lib/data";
@@ -27,6 +28,10 @@ type Load = "loading" | "ready" | "ended" | "unreachable";
 export default function GroupPage() {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
+
+  // Read only so the Ended screen can say whether this trip was kept. The
+  // group view itself works identically signed in or out.
+  const account = useAccount();
 
   // clientId touches localStorage, so resolve it on the client only (avoids SSR crash).
   const [clientId, setClientId] = useState("");
@@ -291,7 +296,12 @@ export default function GroupPage() {
   if (load === "ended" || !trip) {
     return (
       <PhoneFrame>
-        <Ended memberCount={participants.length} onRestart={() => router.push("/")} />
+        <Ended
+          memberCount={participants.length}
+          onRestart={() => router.push("/")}
+          // Only claimed to somebody who has an account for it to be saved to.
+          saved={account.state === "signedIn"}
+        />
       </PhoneFrame>
     );
   }

@@ -10,6 +10,8 @@ import { createNotificationsClient, offlineNotifications } from "./notifications
 import type { NotificationsClient } from "./notifications";
 import { createAccountClient, offlineAccount } from "./account";
 import type { AccountClient } from "./account";
+import { createHistoryClient, offlineHistory } from "./history";
+import type { HistoryClient } from "./history";
 import type { DataClient } from "./types";
 import type { StorageLike } from "./local";
 
@@ -36,6 +38,7 @@ function createApiClient(baseUrl: string): {
   identity: () => Promise<string>;
   notifications: NotificationsClient;
   account: AccountClient;
+  history: HistoryClient;
 } {
   const session = createSessionStore({
     storage: getStorage(),
@@ -63,6 +66,7 @@ function createApiClient(baseUrl: string): {
     identity: async () => (await session.get()).deviceId,
     notifications: createNotificationsClient({ baseUrl, session }),
     account: createAccountClient({ baseUrl, session }),
+    history: createHistoryClient({ baseUrl, session }),
   };
 }
 
@@ -73,6 +77,7 @@ function createOfflineClient(): {
   identity: () => Promise<string>;
   notifications: NotificationsClient;
   account: AccountClient;
+  history: HistoryClient;
 } {
   const data = createLocalAsyncData({
     storage: getStorage(),
@@ -86,6 +91,7 @@ function createOfflineClient(): {
     identity: async () => getClientId(),
     notifications: offlineNotifications,
     account: offlineAccount,
+    history: offlineHistory,
   };
 }
 
@@ -108,6 +114,12 @@ export const backend = BACKEND;
 
 /** The account behind this device, if any. A no-op when running offline. */
 export const account = active.account;
+
+/**
+ * The trips behind that account. Always empty when running offline, because
+ * without an API there are no accounts and therefore no history.
+ */
+export const history = active.history;
 
 /** Empty when push is not configured; the bell falls back to tab-only alerts. */
 export const vapidPublicKey = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "").trim();
