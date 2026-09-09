@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PhoneFrame } from "../../components/PhoneFrame";
 import {
   Group, MemberView, MapView, Ended, Toast, MenuSheet, GlanceView,
   memberFromParticipant, C, FONT, type Member,
-} from "../../components/Radar";
-import { useAccount } from "../../hooks/useAccount";
-import { useGeolocation } from "../../hooks/useGeolocation";
-import { useWakeLock } from "../../hooks/useWakeLock";
+} from "../../../components/Radar";
+import { useHideTabBar } from "../../../components/TabBarContext";
+import { useAccount } from "../../../hooks/useAccount";
+import { useGeolocation } from "../../../hooks/useGeolocation";
+import { useWakeLock } from "../../../hooks/useWakeLock";
 import { data, getIdentity, notifications, vapidPublicKey } from "@/lib/data";
 import { enablePush, disablePush, pushSupported, needsHomeScreenInstall } from "@/lib/push";
 import { serverNow } from "@/lib/serverTime";
@@ -78,6 +78,17 @@ export default function GroupPage() {
 
   // Glance mode forces the lock on: it exists to be stared at from a bar mount.
   const wake = useWakeLock(load === "ready" && (wantWake || view.kind === "glance"));
+
+  // The map and glance own the whole viewport — one is a full-bleed instrument
+  // and the other is meant to be stared at from a handlebar. A nav strip
+  // across either is both a crowded control and a mis-tap onto a different
+  // screen mid-ride.
+  const tabBar = useHideTabBar();
+  useEffect(() => {
+    const full = view.kind === "map" || view.kind === "glance";
+    tabBar.setHidden(full);
+    return () => tabBar.setHidden(false);
+  }, [view.kind, tabBar]);
 
   const changeTheme = useCallback((choice: ThemeChoice) => {
     setThemeChoice(choice);
@@ -257,52 +268,46 @@ export default function GroupPage() {
 
   if (load === "loading") {
     return (
-      <PhoneFrame>
-        <div
-          className="grid place-items-center h-full"
-          style={{ fontFamily: FONT.body, color: C.muted, fontSize: 15 }}
-        >
-          Loading…
-        </div>
-      </PhoneFrame>
+      <div
+        className="grid place-items-center h-full"
+        style={{ fontFamily: FONT.body, color: C.muted, fontSize: 15 }}
+      >
+        Loading…
+      </div>
     );
   }
 
   if (load === "unreachable") {
     return (
-      <PhoneFrame>
-        <div className="flex flex-col h-full items-center justify-center px-8 text-center gap-3">
-          <div style={{ fontFamily: FONT.display, fontSize: 22, color: C.text }}>
-            Can&rsquo;t reach this trip
-          </div>
-          <div style={{ fontFamily: FONT.body, fontSize: 14, color: C.muted }}>
-            You may be offline. The trip is probably still running.
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-6 rounded-2xl"
-            style={{
-              background: C.text, color: C.ground,
-              fontFamily: FONT.body, fontWeight: 600, minHeight: 52,
-            }}
-          >
-            Try again
-          </button>
+      <div className="flex flex-col h-full items-center justify-center px-8 text-center gap-3">
+        <div style={{ fontFamily: FONT.display, fontSize: 22, color: C.text }}>
+          Can&rsquo;t reach this trip
         </div>
-      </PhoneFrame>
+        <div style={{ fontFamily: FONT.body, fontSize: 14, color: C.muted }}>
+          You may be offline. The trip is probably still running.
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-6 rounded-2xl"
+          style={{
+            background: C.text, color: C.ground,
+            fontFamily: FONT.body, fontWeight: 600, minHeight: 52,
+          }}
+        >
+          Try again
+        </button>
+      </div>
     );
   }
 
   if (load === "ended" || !trip) {
     return (
-      <PhoneFrame>
-        <Ended
-          memberCount={participants.length}
-          onRestart={() => router.push("/")}
-          // Only claimed to somebody who has an account for it to be saved to.
-          saved={account.state === "signedIn"}
-        />
-      </PhoneFrame>
+      <Ended
+        memberCount={participants.length}
+        onRestart={() => router.push("/")}
+        // Only claimed to somebody who has an account for it to be saved to.
+        saved={account.state === "signedIn"}
+      />
     );
   }
 
@@ -433,7 +438,7 @@ export default function GroupPage() {
       : null;
 
   return (
-    <PhoneFrame>
+    <>
       {toast && view.kind !== "glance" && (
         <Toast
           text={toast.text}
@@ -504,6 +509,6 @@ export default function GroupPage() {
         onLeave={() => void leave()}
         onEnd={() => void end()}
       />
-    </PhoneFrame>
+    </>
   );
 }

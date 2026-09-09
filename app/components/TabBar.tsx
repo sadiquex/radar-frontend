@@ -19,16 +19,18 @@ const TABS: { key: TabKey; href: string; label: string; icon: typeof Home }[] = 
 /**
  * The signed-in shell's navigation.
  *
- * Rendered only for a signed-in person, and never on `/t/[code]` — the group
- * view is a full-bleed instrument with its own bottom action bar, and a second
- * strip across the bottom of it would both crowd the controls and invite a
- * mis-tap onto a different screen mid-ride.
+ * Rendered for a signed-in person across the whole shell, including the group
+ * view — which is reached often enough mid-trip that losing every other
+ * section behind a Back was the worse trade. It stands down for the two views
+ * that own the whole viewport: the map and glance mode.
+ *
+ * `active` is null inside a trip: none of the four sections is where you are.
  *
  * Buttons rather than `<Link>`: these are app navigation between three client
  * routes, and the prefetch-on-viewport behaviour of a link is pointless for a
  * bar that is permanently in the viewport.
  */
-export function TabBar({ active }: { active: TabKey }) {
+export function TabBar({ active }: { active: TabKey | null }) {
   const router = useRouter();
 
   return (

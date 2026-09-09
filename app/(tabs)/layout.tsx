@@ -14,12 +14,17 @@ import { stampSignedIn } from "@/lib/accountFlag";
  * A route group rather than three independent pages, so `PhoneFrame` is
  * mounted once and switching tabs does not tear down and rebuild the frame.
  *
- * `/t/[code]`, `/join` and `/trips/[tripId]` are deliberately outside it: the
- * group view is a full-bleed instrument with its own bottom action bar, and
- * the trip detail is a leaf with its own Back.
+ * `/t/[code]` lives inside this group too, so the shell — frame and tab bar —
+ * stays mounted while you're in a trip; the page itself stands the bar down
+ * for the map and for glance mode, the two views that own the whole viewport.
+ * `/join` and `/trips/[tripId]` remain outside it: a join-by-code form and a
+ * past-trip leaf, neither of which is one of the four sections.
  */
 
-const TAB_FOR_PATH = (pathname: string): TabKey => {
+const TAB_FOR_PATH = (pathname: string): TabKey | null => {
+  // A trip is not one of the four sections. Highlighting Home while you are
+  // looking at a trip would claim you are somewhere you are not.
+  if (pathname.startsWith("/t/")) return null;
   if (pathname.startsWith("/trips")) return "trips";
   if (pathname.startsWith("/repairs")) return "repairs";
   if (pathname.startsWith("/you")) return "you";
