@@ -75,8 +75,15 @@ export function LiveScope({
             const cx = 100 + Math.cos(c.angle) * R_OUTER * c.radius;
             const cy = 100 + Math.sin(c.angle) * R_OUTER * c.radius;
             // 5 at one member, growing slowly: a busy trip should read as
-            // bigger without a six-person convoy swamping the field.
-            const r = Math.min(11, 5 + c.memberCount);
+            // bigger without a six-person convoy swamping the field. Capped
+            // at 8, not higher: a contact at radius 1 sits 88 units from the
+            // centre of the 200x200 viewBox, whose cardinal-axis boundary is
+            // only 100 units out, and the halo below adds another 3 — so the
+            // dot must stay small enough that 88 + r + 3 never exceeds 100,
+            // or the halo gets silently clipped by the SVG's edge. Shrink the
+            // dot here, not the placement: radius 1 has to stay on the outer
+            // ring, which is what "furthest out" means on this scope.
+            const r = Math.min(8, 5 + c.memberCount);
 
             // Nobody located: the same outlined treatment as the empty state,
             // which already means "something belongs here and nobody is
@@ -94,7 +101,7 @@ export function LiveScope({
             const tone = STATUS[c.status].color;
             return (
               <g key={c.tripId}>
-                <circle cx={cx} cy={cy} r={r + 5} fill={tone} fillOpacity="0.15" />
+                <circle cx={cx} cy={cy} r={r + 3} fill={tone} fillOpacity="0.15" />
                 <circle cx={cx} cy={cy} r={r} fill={tone} />
               </g>
             );
