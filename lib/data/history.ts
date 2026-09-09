@@ -122,6 +122,18 @@ function asPulse(raw: unknown): TripPulse | null {
   };
 }
 
+/**
+ * Every path that can hand back a `TripEntry` runs live rows through this, not
+ * just `live()`. `list()` and `get()` both return `pulse: TripPulse | null` in
+ * their types, but a raw JSON body only has that shape if something enforces
+ * it — an API older than this client omits the field entirely, and leaving it
+ * as `undefined` breaks `pulse === null` checks downstream (`lib/pulse.ts`)
+ * that assume the type is honest.
+ */
+function sanitiseEntry(t: TripEntry & { pulse?: unknown }): TripEntry {
+  return t.kind === "live" ? { ...t, pulse: asPulse(t.pulse) } : t;
+}
+
 export function createHistoryClient(deps: HistoryDeps): HistoryClient {
   const doFetch = deps.fetchFn ?? globalThis.fetch;
 
@@ -138,8 +150,8 @@ export function createHistoryClient(deps: HistoryDeps): HistoryClient {
       try {
         const res = await send("/v1/me/trips/live");
         if (!res.ok) return [];
-        const body = (await res.json()) as { trips?: (LiveTripEntry & { pulse?: unknown })[] };
-        return (body.trips ?? []).map((t) => ({ ...t, pulse: asPulse(t.pulse) }));
+        const body = (await res.json()) as { trips?: (TripEntry & { pulse?: unknown })[] };
+        return (body.trips ?? []).map(sanitiseEntry) as LiveTripEntry[];
       } catch {
         // Home renders perfectly well with no live trips, and an error banner
         // over the two buttons somebody came here to press helps nobody.
@@ -152,8 +164,11 @@ export function createHistoryClient(deps: HistoryDeps): HistoryClient {
         const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
         const res = await send(`/v1/me/trips${query}`);
         if (!res.ok) return { trips: [], nextCursor: null };
-        const body = (await res.json()) as Partial<HistoryPage>;
-        return { trips: body.trips ?? [], nextCursor: body.nextCursor ?? null };
+        const body = (await res.json()) as Partial<{
+          trips: (TripEntry & { pulse?: unknown })[];
+          nextCursor: string | null;
+        }>;
+        return { trips: (body.trips ?? []).map(sanitiseEntry), nextCursor: body.nextCursor ?? null };
       } catch {
         return { trips: [], nextCursor: null };
       }
@@ -163,8 +178,8 @@ export function createHistoryClient(deps: HistoryDeps): HistoryClient {
       try {
         const res = await send(`/v1/me/trips/${encodeURIComponent(tripId)}`);
         if (!res.ok) return null;
-        const body = (await res.json()) as { trip?: TripEntry };
-        return body.trip ?? null;
+        const body = (await res.json()) as { trip?: TripEntry & { pulse?: unknown } };
+        return body.trip ? sanitiseEntry(body.trip) : null;
       } catch {
         return null;
       }

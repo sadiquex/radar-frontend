@@ -7,10 +7,21 @@ export interface MemberStatus {
 }
 
 // Tunable thresholds. Conservative defaults that read well on a city/intercity scale.
+//
+// CLUSTER_RADIUS_M, AHEAD_BEHIND_MARGIN_M and STOPPED_MS are exported (not
+// module-private) so `lib/__tests__/contract.test.ts` can pin them
+// numerically against contract.json, the same way
+// `backend/src/domain/status.test.ts` pins its ported copy. A behavioural
+// pin alone does not discriminate finely enough here: sweeping these values
+// still passes the shared status goldens across most of their plausible
+// range, so the numeric assertion is what actually catches drift.
+// ARRIVE_RADIUS_M stays module-private; it crosses the network boundary
+// (the purge sweep derives arrival on the server too), so it is pinned
+// behaviourally instead — see the "calls somebody arrived" test below.
 const ARRIVE_RADIUS_M = 100; // at the destination
-const CLUSTER_RADIUS_M = 100; // "with group" — near the group's centre
-const AHEAD_BEHIND_MARGIN_M = 150; // how far off the median you must be to count as ahead/behind
-const STOPPED_MS = 5 * 60 * 1000; // no movement for 5 min
+export const CLUSTER_RADIUS_M = 100; // "with group" — near the group's centre
+export const AHEAD_BEHIND_MARGIN_M = 150; // how far off the median you must be to count as ahead/behind
+export const STOPPED_MS = 5 * 60 * 1000; // no movement for 5 min
 
 interface Located {
   id: string;

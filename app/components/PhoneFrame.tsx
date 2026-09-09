@@ -8,7 +8,7 @@ import { C } from "./Radar";
  *
  * Heights are 100dvh, never 100vh: on iOS Safari and Android Chrome the
  * dynamic toolbar makes 100vh taller than the visible viewport, which pushed
- * the Group screen's bottom action bar below the fold until you scrolled.
+ * the signed-in shell's bottom tab bar below the fold until you scrolled.
  */
 export function PhoneFrame({ children }: { children: React.ReactNode }) {
   return (

@@ -2,7 +2,12 @@ import { describe, it, expect } from "vitest";
 import contract from "../../contract.json";
 import { generateShareCode, SHARE_CODE_ALPHABET } from "../shareCode";
 import { haversineMeters, shouldWritePosition } from "../geo";
-import { computeStatuses } from "../status";
+import {
+  computeStatuses,
+  CLUSTER_RADIUS_M,
+  AHEAD_BEHIND_MARGIN_M,
+  STOPPED_MS,
+} from "../status";
 import { diffStatuses } from "../notify";
 import { createLocalData } from "../data/local";
 import { ATTENTION_ORDER } from "../pulse";
@@ -13,7 +18,10 @@ import type { StatusKey } from "../types";
 // mismatched alphabet makes every share code unfindable. contract.json is the
 // referee and this suite is the frontend's half of the agreement.
 //
-// Where a constant is module-private the assertion is behavioural, which pins
+// Three of the four status thresholds (CLUSTER_RADIUS_M,
+// AHEAD_BEHIND_MARGIN_M, STOPPED_MS) are exported and pinned numerically
+// below, matching backend/src/domain/status.test.ts. ARRIVE_RADIUS_M stays
+// module-private, so that one assertion is behavioural instead, which pins
 // the actual rule rather than a number that happens to sit next to it.
 
 function store() {
@@ -119,6 +127,18 @@ describe("contract.json conformance", () => {
 
     const outside = computeStatuses(at(contract.arriveRadiusM + 1), ACCRA, 0);
     expect(outside.rider!.status).not.toBe("arrived");
+  });
+
+  it("matches the shared cluster radius", () => {
+    expect(CLUSTER_RADIUS_M).toBe(contract.clusterRadiusM);
+  });
+
+  it("matches the shared ahead/behind margin", () => {
+    expect(AHEAD_BEHIND_MARGIN_M).toBe(contract.aheadBehindMarginM);
+  });
+
+  it("matches the shared stopped threshold", () => {
+    expect(STOPPED_MS).toBe(contract.stoppedMs);
   });
 
   it("writes positions on the shared cadence and distance", () => {

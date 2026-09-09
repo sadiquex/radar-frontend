@@ -74,9 +74,11 @@ export function LiveScope({
           contacts.map((c) => {
             const cx = 100 + Math.cos(c.angle) * R_OUTER * c.radius;
             const cy = 100 + Math.sin(c.angle) * R_OUTER * c.radius;
-            // 5 at one member, growing slowly: a busy trip should read as
-            // bigger without a six-person convoy swamping the field. Capped
-            // at 8, not higher: a contact at radius 1 sits 88 units from the
+            // 6 at one member, 7 at two, saturating at 8 from three members
+            // on: the size channel only needs to distinguish 1 / 2 / 3-or-more,
+            // not read out the exact count, so it stops growing well before a
+            // six-person convoy could swamp the field. Capped at 8, not
+            // higher: a contact at radius 1 sits 88 units from the
             // centre of the 200x200 viewBox, whose cardinal-axis boundary is
             // only 100 units out, and the halo below adds another 3 — so the
             // dot must stay small enough that 88 + r + 3 never exceeds 100,

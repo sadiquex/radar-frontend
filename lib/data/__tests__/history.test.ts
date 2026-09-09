@@ -196,3 +196,14 @@ describe("history.live", () => {
     expect(got!.pulse).toEqual({ ...pulse, worst: null });
   });
 });
+
+describe("history.list", () => {
+  it("reads a missing pulse on a live entry as null, not undefined", async () => {
+    // list() shares LiveTripEntry with live(), and an API older than this
+    // client can send a live row with no pulse field at all here too. Without
+    // sanitising this path the same way, `pulse` stays `undefined`, which
+    // fails `=== null` checks downstream (lib/pulse.ts) and throws.
+    const [got] = (await clientWith({ trips: [entry()] }).list()).trips;
+    expect((got as { pulse: unknown }).pulse).toBeNull();
+  });
+});

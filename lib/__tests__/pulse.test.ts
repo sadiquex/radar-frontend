@@ -67,7 +67,7 @@ describe("contactsFor", () => {
   });
 
   it("gives a trip the same angle every time, so a poll does not move it", () => {
-    // useLiveTrips refetches every four seconds. A contact that jumps on each
+    // useLiveTrips polls every 30 seconds. A contact that jumps on each
     // refresh reads as movement that did not happen.
     // "stable" first, then "stable" second — an angle derived from list
     // position would differ between these two; one derived from the id cannot.
