@@ -40,6 +40,17 @@
         { "id": "c", "lat": 5.6486661, "lng": -0.187, "lastMovedAt": 1000000 }
       ],
       "expected": { "a": "with", "b": "with", "c": "behind" }
+    },
+    {
+      "name": "a rider well clear of the pack reads as ahead",
+      "now": 1000000,
+      "destination": { "lat": 5.6037, "lng": -0.187 },
+      "members": [
+        { "id": "a", "lat": 5.6126932, "lng": -0.187, "lastMovedAt": 1000000 },
+        { "id": "b", "lat": 5.6306796, "lng": -0.187, "lastMovedAt": 1000000 },
+        { "id": "c", "lat": 5.6311293, "lng": -0.187, "lastMovedAt": 1000000 }
+      ],
+      "expected": { "a": "ahead", "b": "with", "c": "with" }
     }
   ],
   "tripTtlMs": 28800000,
