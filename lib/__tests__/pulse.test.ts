@@ -69,9 +69,11 @@ describe("contactsFor", () => {
   it("gives a trip the same angle every time, so a poll does not move it", () => {
     // useLiveTrips refetches every four seconds. A contact that jumps on each
     // refresh reads as movement that did not happen.
-    const a = contactsFor([trip("stable")])[0]!.angle;
-    const b = contactsFor([trip("stable"), trip("other")])[0]!.angle;
-    expect(a).toBe(b);
+    // "stable" first, then "stable" second — an angle derived from list
+    // position would differ between these two; one derived from the id cannot.
+    const first = contactsFor([trip("stable"), trip("other")])[0]!.angle;
+    const second = contactsFor([trip("other"), trip("stable")])[1]!.angle;
+    expect(first).toBe(second);
   });
 
   it("gives different trips different angles", () => {
@@ -108,5 +110,9 @@ describe("pulseWords", () => {
       .toBe("Everyone with the group");
     expect(pulseWords(pulse({ moving: 0, arrived: 3, worst: "arrived" })))
       .toBe("Everyone arrived");
+    expect(pulseWords(pulse({ stopped: 0, moving: 1, arrived: 0, worst: "behind" })))
+      .toBe("Someone behind");
+    expect(pulseWords(pulse({ stopped: 0, moving: 1, arrived: 0, worst: "ahead" })))
+      .toBe("Someone ahead");
   });
 });
