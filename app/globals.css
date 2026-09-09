@@ -192,9 +192,10 @@ html, body {
   animation: gtrise 0.42s cubic-bezier(0.2, 0, 0, 1) both;
 }
 
-/* The scope's sweep. Only ever runs on an idle Home screen, where it is the
-   state rather than decoration: the radar is empty because nobody is out
-   there. Transform-only, so it stays on the compositor, and the global
+/* The scope's sweep. Runs whenever the scope is on screen, which is Home
+   itself now — empty and idle, or carrying a contact per running trip. It is
+   the instrument's own motion either way, not decoration reserved for the
+   idle state. Transform-only, so it stays on the compositor, and the global
    prefers-reduced-motion block below stops it dead. */
 @keyframes gtsweep {
   from { transform: rotate(0deg); }

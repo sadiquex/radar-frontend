@@ -42,11 +42,17 @@ app/
   globals.css               Tailwind base, keyframes, focus ring, tabular-nums, reduced-motion
   page.tsx                  Landing → create → share flow
   join/page.tsx             Join by typed code
-  t/[code]/page.tsx         Live group view (geolocation, statuses, notifications, map/member sub-views)
+  (tabs)/t/[code]/page.tsx  Live group view (geolocation, statuses, notifications, map/member sub-views).
+                            Inside the tab group: the bar reaches it too, standing down only for the
+                            map and glance sub-views, the two that want the whole viewport
   t/[code]/join/page.tsx    Join by link (code prefilled)
   components/
     Radar.tsx               Prop-driven screen library + design tokens (C / FONT) + Member view-model,
                             plus MenuSheet (trip options) and GlanceView (bar-mount mode)
+    LiveScope.tsx           Radar's own mark, scaled up to carry Home: the empty-state drawing and the
+                            live status board are the same instrument, carrying a contact per running trip
+    GroupScreen.tsx         The trip screen's body (verdict, horizon, roster) — no bottom bar of its own;
+                            Map is a floating pill instead
     PhoneFrame.tsx          Phone-shaped shell (full screen on mobile, device frame on desktop)
     JoinFlow.tsx            Shared join logic for both join routes
     LiveMap.tsx             MapLibre GL map (OSM tiles) — live pins + destination picker
@@ -77,7 +83,7 @@ The entire app talks to one interface: the `data` singleton (`lib/data/index.ts`
 | Trip create / share code / join by link or code | Real (local data layer) |
 | Live member sync | Real — cross-tab today via storage events; Supabase Realtime later |
 | Geolocation | Real `navigator.geolocation.watchPosition`, speed-aware cadence (20s/30m walking → 5s/20m riding) |
-| Status engine (ahead/behind/with/stopped/arrived) | Real, pure + unit-tested |
+| Status engine (ahead/behind/with/stopped/arrived) | Real, pure + unit-tested. Ported to the backend too (`backend/src/domain/status.ts`), so Home's dashboard can rank trips it isn't currently open in — both copies are pinned to the same goldens in `contract.json` |
 | Map | Real — MapLibre GL + OpenStreetMap tiles, live pins, destination picker |
 | Notifications | Real — opt-in browser notifications + in-app toasts on status changes |
 | Haptics | Real on Android; `navigator.vibrate` does not exist in iOS Safari |
@@ -103,6 +109,29 @@ cold start, or no `NEXT_PUBLIC_API_URL` at all — every one of them leaves the
 screen exactly as it was before the feature existed: type a name, drop a pin.
 There is no state in which a third party's availability stops somebody starting
 a trip.
+
+## Home is a live status board
+
+Signed in, `/` is not a landing page you pass through once — the scope
+(`app/components/LiveScope.tsx`, Radar's own mark, drawn at full size) is on
+screen whether anything is running or not. With nothing running it is the
+empty-state drawing it always was; once something is, it carries one contact
+per live trip, at a position derived from the trip id (stable across polls)
+and a status colour from the same pulse the cards below it read.
+
+Cards rank worst-status-first (`lib/pulse.ts`'s `rankTrips`), not by list order
+or creation time — a trip where somebody has stopped has to be seen before two
+that are running fine. Each card states its status in words next to the glyph
+("2 stopped", "Everyone with the group", "Nobody located yet"): colour
+reinforces a status here same as everywhere else in the design system, it
+never carries one alone.
+
+The tab bar now reaches the trip screen, too. `/t/[code]` lives inside the
+same `(tabs)` route group as Home, Trips and You, so opening a trip keeps the
+bar on screen (nothing highlighted — a trip isn't one of the four sections)
+and the group screen no longer needs a bottom action bar of its own; Map is a
+floating pill instead. The bar stands down only for the two views that want
+the whole viewport for themselves: the map, and glance mode.
 
 ## Design system
 
