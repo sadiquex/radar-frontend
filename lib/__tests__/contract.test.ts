@@ -5,6 +5,7 @@ import { haversineMeters, shouldWritePosition } from "../geo";
 import { computeStatuses } from "../status";
 import { diffStatuses } from "../notify";
 import { createLocalData } from "../data/local";
+import { ATTENTION_ORDER } from "../pulse";
 import type { StatusKey } from "../types";
 
 // The backend is a separate repo, so these values exist twice. Drift is silent
@@ -196,5 +197,12 @@ describe("contract.json conformance", () => {
     for (const [id, expected] of Object.entries(golden.expected)) {
       expect(got[id]?.status, `member ${id} in "${golden.name}"`).toBe(expected);
     }
+  });
+
+  it("uses the shared attention order", () => {
+    // This array exists in both repos — it decides which trip is most worth
+    // your attention on Home and which rider is first on the trip screen.
+    // Drift would make those two screens disagree about the same group.
+    expect(ATTENTION_ORDER).toEqual(contract.attentionOrder);
   });
 });
