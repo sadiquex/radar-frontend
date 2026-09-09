@@ -181,4 +181,18 @@ describe("history.live", () => {
     const [got] = await clientWith({ trips: [entry({ pulse: null })] }).live();
     expect(got!.pulse).toBeNull();
   });
+
+  it("treats an unrecognised worst string as null, keeping the rest of the pulse", async () => {
+    // asPulse must not trust the wire past a type-cast: an unknown status key
+    // would otherwise flow straight into STATUS[worst] on Home and throw.
+    const pulse = { stopped: 1, moving: 2, arrived: 0, worst: "banana", kmLeftMax: 9.1 };
+    const [got] = await clientWith({ trips: [entry({ pulse })] }).live();
+    expect(got!.pulse).toEqual({ ...pulse, worst: null });
+  });
+
+  it("treats a non-string worst as null, keeping the rest of the pulse", async () => {
+    const pulse = { stopped: 1, moving: 2, arrived: 0, worst: 42, kmLeftMax: 9.1 };
+    const [got] = await clientWith({ trips: [entry({ pulse })] }).live();
+    expect(got!.pulse).toEqual({ ...pulse, worst: null });
+  });
 });

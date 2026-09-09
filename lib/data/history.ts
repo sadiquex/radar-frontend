@@ -100,6 +100,15 @@ export interface HistoryDeps {
   fetchFn?: typeof fetch;
 }
 
+// Not imported from app/components/Radar.tsx: lib/ must not depend on a
+// component module. This is the client's own copy of the known status keys,
+// used only to validate a field that arrived over the wire.
+const STATUS_KEYS = new Set<StatusKey>(["ahead", "behind", "with", "stopped", "arrived"]);
+
+function asWorst(raw: unknown): StatusKey | null {
+  return typeof raw === "string" && STATUS_KEYS.has(raw as StatusKey) ? (raw as StatusKey) : null;
+}
+
 function asPulse(raw: unknown): TripPulse | null {
   if (raw === null || typeof raw !== "object") return null;
   const p = raw as Partial<TripPulse>;
@@ -108,7 +117,7 @@ function asPulse(raw: unknown): TripPulse | null {
     stopped: p.stopped,
     moving: p.moving,
     arrived: typeof p.arrived === "number" ? p.arrived : 0,
-    worst: (p.worst ?? null) as StatusKey | null,
+    worst: asWorst(p.worst),
     kmLeftMax: typeof p.kmLeftMax === "number" ? p.kmLeftMax : null,
   };
 }
