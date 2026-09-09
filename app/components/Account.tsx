@@ -14,6 +14,7 @@ import { LiveScope } from "./LiveScope";
 import { TAB_BAR_SPACE } from "./TabBar";
 import type { AccountDevice } from "@/lib/data/account";
 import type { LiveTripEntry, TripEntry } from "@/lib/data/history";
+import { contactsFor, pulseWords, rankTrips } from "@/lib/pulse";
 import type { ThemeChoice } from "@/lib/theme";
 import {
   arrivalSummary, formatDay, formatDuration, formatRemaining, groupByMonth,
@@ -95,6 +96,25 @@ export const LiveTripCard = ({
       >
         {trip.memberCount} {trip.memberCount === 1 ? "person" : "people"} ·{" "}
         {formatRemaining(trip.expiresAt, now)}
+      </span>
+      {/* The status line: this is what tells a stopped trip apart from two
+          running fine. The glyph and the words carry it; colour only
+          reinforces, per the rule every status in this app follows. */}
+      <span className="flex items-center gap-1.5" style={{ marginTop: 3 }}>
+        {trip.pulse?.worst != null && <Glyph s={trip.pulse.worst} size={11} />}
+        <span
+          style={{
+            fontFamily: FONT.body, fontSize: 13,
+            color: trip.pulse?.worst != null ? STATUS[trip.pulse.worst].color : C.muted,
+          }}
+        >
+          {pulseWords(trip.pulse)}
+        </span>
+        {trip.pulse?.kmLeftMax != null && (
+          <span className="tnum" style={{ fontFamily: FONT.body, fontSize: 13, color: C.muted }}>
+            · {trip.pulse.kmLeftMax.toFixed(1)} km left
+          </span>
+        )}
       </span>
     </span>
     <ChevronRight size={20} style={{ color: C.muted, flexShrink: 0 }} />
@@ -822,13 +842,21 @@ export const YouScreen = ({
  * the recent list and the fine print below them, means the nav is the only
  * thing anchored down there and the buttons stop competing with it.
  *
- * **`justify-content: safe center`, never plain `center`.** A centred flex
- * container that overflows pushes content out of *both* ends, and `scrollTop`
- * cannot go negative, so the top becomes permanently unreachable — the screen
- * simply refuses to scroll. `safe` falls back to flex-start the moment content
- * exceeds the box, and browsers that do not know the keyword drop the whole
- * declaration and land on flex-start too, which is the behaviour we want
- * anyway.
+ * **No `justify-content: center` on the scroller, safe or otherwise.** An
+ * earlier version centred it, which was fine with nothing running — one short
+ * empty state — but centres a *list* too: three running trips floated in the
+ * middle of the viewport under a large empty void above them. Content now
+ * starts at the top and the scope, ranked cards and actions simply flow.
+ *
+ * **The scope is on screen in both states.** With nothing running it is the
+ * empty-state drawing it always was. With trips running it carries a contact
+ * per trip, because the radar drawing is this product's whole idea and it
+ * used to appear only when it had nothing to show.
+ *
+ * **Cards rank worst-status-first (`rankTrips`), never by list order.** A
+ * trip where somebody stopped needs to be seen before two that are running
+ * fine, and each card now says what is happening in words next to the glyph
+ * — colour reinforces the status, it never carries it alone.
  */
 export const HomeDashboard = ({
   name, live, recent, now, onStart, onJoin, onOpenLive, onOpenTrip, onSeeAll,
@@ -845,6 +873,8 @@ export const HomeDashboard = ({
 }) => {
   const running = live.length > 0;
   const people = live.reduce((n, t) => n + t.memberCount, 0);
+  const ranked = rankTrips(live);
+  const contacts = contactsFor(live);
 
   return (
     <div className="flex flex-col h-full" style={{ paddingTop: PAD_T }}>
@@ -872,10 +902,16 @@ export const HomeDashboard = ({
 
       <div
         className="flex-1 min-h-0 overflow-y-auto px-6 flex flex-col"
-        style={{ justifyContent: "safe center", paddingBottom: TAB_BAR_SPACE }}
+        style={{ paddingBottom: TAB_BAR_SPACE }}
       >
         {running ? (
           <div className="flex flex-col gap-2" style={{ paddingTop: 16 }}>
+            {/* The scope, holding a contact per running trip. It used to
+                appear only in the empty state; the radar drawing is this
+                product's whole idea and deserves to be on screen either way. */}
+            <div className="flex flex-col items-center" style={{ paddingTop: 12 }}>
+              <LiveScope contacts={contacts} size="clamp(124px, 22vh, 176px)" />
+            </div>
             <div className="flex items-baseline gap-2" style={{ marginBottom: 2 }}>
               <span
                 className="gtpulse"
@@ -893,7 +929,9 @@ export const HomeDashboard = ({
                 {people} {people === 1 ? "person" : "people"}
               </span>
             </div>
-            {live.map((t) => (
+            {/* Worst status first, ties by soonest expiry, unlocated last — a
+                stopped trip needs to be seen before two running fine. */}
+            {ranked.map((t) => (
               <LiveTripCard
                 key={t.tripId}
                 trip={t}
@@ -908,7 +946,7 @@ export const HomeDashboard = ({
              The scope is sized against the viewport so it never crowds the
              action off a short phone. */
           <div className="flex flex-col items-center text-center" style={{ paddingTop: 12 }}>
-            <LiveScope size="clamp(124px, 25vh, 196px)" />
+            <LiveScope contacts={contacts} size="clamp(124px, 25vh, 196px)" />
             <h1
               style={{
                 fontFamily: FONT.display, fontSize: 24, fontWeight: 500,
@@ -929,16 +967,41 @@ export const HomeDashboard = ({
           </div>
         )}
 
-        <div className="flex flex-col gap-3" style={{ paddingTop: 26 }}>
-          <PrimaryButton onClick={onStart}>
-            Start a trip
-            <ArrowRight size={20} />
-          </PrimaryButton>
-          <SecondaryButton onClick={onJoin}>
-            Join with a code
-            <CornerDownLeft size={20} />
-          </SecondaryButton>
-        </div>
+        {running ? (
+          /* Demoted to a compact, secondary-weight pair: something is already
+             running, so the cards above stay the loudest thing on the screen.
+             `SecondaryButton` itself is `justify-between`, tuned for a label
+             on the left and an icon on the right — right for a single
+             full-width button, but two side by side would read as a label
+             stuck to the left edge with a gap to the right. Each button is
+             wrapped in a `flex-1` div so the pair splits the row evenly, and
+             the label is wrapped in its own flex-1, centred span so it reads
+             as a normal, centred button rather than a left-hung one.
+             `SecondaryButton` stays untouched — other screens depend on it. */
+          <div className="flex gap-3" style={{ paddingTop: 22 }}>
+            <div className="flex-1">
+              <SecondaryButton onClick={onStart}>
+                <span style={{ flex: 1, textAlign: "center" }}>Start a trip</span>
+              </SecondaryButton>
+            </div>
+            <div className="flex-1">
+              <SecondaryButton onClick={onJoin}>
+                <span style={{ flex: 1, textAlign: "center" }}>Join</span>
+              </SecondaryButton>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3" style={{ paddingTop: 26 }}>
+            <PrimaryButton onClick={onStart}>
+              Start a trip
+              <ArrowRight size={20} />
+            </PrimaryButton>
+            <SecondaryButton onClick={onJoin}>
+              Join with a code
+              <CornerDownLeft size={20} />
+            </SecondaryButton>
+          </div>
+        )}
 
         {recent.length > 0 && (
           <div style={{ paddingTop: 26 }}>
