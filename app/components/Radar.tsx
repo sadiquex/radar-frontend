@@ -396,7 +396,7 @@ export const Field = ({
 );
 
 // ─── The signature: Group Horizon ───────────────────────────────────────────
-const Horizon = ({
+export const Horizon = ({
   members, total, destinationName,
 }: { members: Member[]; total: number; destinationName: string | null }) => {
   const located = members.filter((m) => m.located);
@@ -470,7 +470,7 @@ const Horizon = ({
 // ─── The verdict ────────────────────────────────────────────────────────────
 // The one thing to read. Largest type on the screen, at the top, because that
 // is where the eye lands and a rider at effort reads one field, not eight.
-const VerdictBlock = ({ verdict }: { verdict: Verdict }) => {
+export const VerdictBlock = ({ verdict }: { verdict: Verdict }) => {
   const tone = TONE_COLOR[verdict.tone];
   return (
     <div>
@@ -1213,7 +1213,7 @@ export type LocationNotice = "denied" | "unsupported" | "locating" | null;
 // Anyone the group might need to act on. Members travelling with the pack are
 // the uninteresting case and collapse into one line; a member with no position
 // yet is genuinely worth surfacing, so they count as an outlier too.
-function partition(members: Member[]) {
+export function partition(members: Member[]) {
   const order: StatusKey[] = ["stopped", "behind", "arrived", "ahead"];
   const outliers = members
     .filter((m) => !m.located || m.status !== "with")
