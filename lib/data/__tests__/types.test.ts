@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { ApiError, isTripGone, isNotMember, isRateLimited } from "../types";
+import {
+  ApiError,
+  isTripGone,
+  isNotMember,
+  isRateLimited,
+  isAlreadyInTrip,
+  occupiedTrip,
+} from "../types";
 
 describe("ApiError classification", () => {
   // Screens branch on these rather than on status numbers or message strings,
@@ -49,6 +56,57 @@ describe("ApiError classification", () => {
     it("is false for anything else", () => {
       expect(isRateLimited(new ApiError("internal", 500))).toBe(false);
       expect(isRateLimited(new Error("boom"))).toBe(false);
+    });
+  });
+
+  describe("isAlreadyInTrip", () => {
+    it("is true when this device is riding somewhere else", () => {
+      expect(isAlreadyInTrip(new ApiError("already_in_trip", 409))).toBe(true);
+    });
+
+    it("is false for a full trip, which is about the trip and not about us", () => {
+      // Both are 409s from the same endpoint, so nothing but the code tells
+      // them apart — and they need opposite screens: one offers to leave the
+      // other trip, the other can only apologise.
+      expect(isAlreadyInTrip(new ApiError("trip_full", 409))).toBe(false);
+    });
+
+    it("is false for anything else", () => {
+      expect(isAlreadyInTrip(new ApiError("forbidden", 403))).toBe(false);
+      expect(isAlreadyInTrip(new Error("boom"))).toBe(false);
+      expect(isAlreadyInTrip(null)).toBe(false);
+    });
+  });
+
+  describe("occupiedTrip", () => {
+    // The refusal has to name the trip, or the screen can only say "you are in
+    // a trip" and leave the rider to go and find which one.
+    it("reads the trip the server named", () => {
+      const err = new ApiError("already_in_trip", 409, undefined, {
+        id: "trip-1",
+        name: "Test Leg",
+        shareCode: "ABC234",
+      });
+      expect(occupiedTrip(err)).toEqual({
+        id: "trip-1",
+        name: "Test Leg",
+        shareCode: "ABC234",
+      });
+    });
+
+    it("tolerates an unnamed trip", () => {
+      const err = new ApiError("already_in_trip", 409, undefined, {
+        id: "trip-1",
+        name: null,
+        shareCode: "ABC234",
+      });
+      expect(occupiedTrip(err)?.name).toBeNull();
+    });
+
+    it("is null when the payload is missing or the wrong shape", () => {
+      expect(occupiedTrip(new ApiError("already_in_trip", 409))).toBeNull();
+      expect(occupiedTrip(new ApiError("already_in_trip", 409, undefined, { id: 7 }))).toBeNull();
+      expect(occupiedTrip(new Error("boom"))).toBeNull();
     });
   });
 
