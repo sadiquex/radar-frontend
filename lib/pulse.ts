@@ -48,7 +48,7 @@ export interface Contact {
 /**
  * FNV-1a, for a stable angle per trip.
  *
- * `useLiveTrips` refetches every four seconds and the list order changes as
+ * `useLiveTrips` refetches every 30 seconds and the list order changes as
  * statuses do, so an angle derived from an index would move a contact on every
  * poll — movement that did not happen. Derived from the id, it never moves.
  */

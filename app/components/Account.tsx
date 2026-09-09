@@ -74,8 +74,12 @@ export const LiveTripCard = ({
     className="w-full rounded-2xl flex items-center gap-3 text-left px-4 transition-transform active:scale-[0.99]"
     style={{
       minHeight: 68,
-      background: STATUS.arrived.soft,
-      border: `1.5px solid ${C.arrived}`,
+      // The shell reinforces the same status the glyph and words below carry;
+      // it never asserts one on its own. `pulse` null means "nobody located
+      // yet" — a neutral shell, never the "everyone's fine" green, so "we
+      // don't know" can't be mistaken for "arrived".
+      background: trip.pulse?.worst != null ? STATUS[trip.pulse.worst].soft : C.raised,
+      border: `1.5px solid ${trip.pulse?.worst != null ? STATUS[trip.pulse.worst].color : C.line}`,
     }}
   >
     <span
