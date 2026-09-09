@@ -10,6 +10,7 @@ import {
 } from "./Radar";
 import { PRODUCT_NAME } from "@/lib/brand";
 import { LiveMap } from "./LiveMap";
+import { LiveScope } from "./LiveScope";
 import { TAB_BAR_SPACE } from "./TabBar";
 import type { AccountDevice } from "@/lib/data/account";
 import type { LiveTripEntry, TripEntry } from "@/lib/data/history";
@@ -156,66 +157,6 @@ export const TripRow = ({
   );
 };
 
-
-/**
- * The scope: Radar's own mark, at the size where it can carry a screen.
- *
- * This is the answer to a Home screen with nothing on it. The product is called
- * Radar and its mark is a top-down radar — you at the centre, the group around
- * you — so an empty scope is not a placeholder for missing content. It *is* the
- * content: nobody is out there right now. When a trip is running the live cards
- * take this space, which is the same information rendered as something you can
- * tap.
- *
- * Geometry is the full mark from `app/icon.svg`: two range rings, you, and a
- * contact on the outer ring. Not a drawing invented for this screen.
- */
-export const Scope = ({ size = 176 }: { size?: number | string }) => (
-  <div
-    className="relative grid place-items-center shrink-0"
-    style={{ width: size, height: size, aspectRatio: "1" }}
-    aria-hidden
-  >
-    {/* The sweep sits under the rings so it reads as passing beneath them. */}
-    <svg className="gt-sweep absolute inset-0 w-full h-full" viewBox="0 0 200 200">
-      <defs>
-        <linearGradient id="scope-sweep" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor={C.arrived} stopOpacity="0" />
-          <stop offset="100%" stopColor={C.arrived} stopOpacity="0.22" />
-        </linearGradient>
-      </defs>
-      {/* A quarter-turn wedge trailing the beam. */}
-      <path d="M100 100 L100 12 A88 88 0 0 1 188 100 Z" fill="url(#scope-sweep)" />
-      <line x1="100" y1="100" x2="188" y2="100" stroke={C.arrived} strokeOpacity="0.5" strokeWidth="1.5" />
-    </svg>
-
-    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 200">
-      {/* Two range rings, as the full mark has. A third, inner ring was tried
-          and sat close enough to the centre dot to read as a halo. */}
-      <circle cx="100" cy="100" r="88" fill="none" stroke={C.lineStrong} strokeOpacity="0.55" strokeWidth="1.25" />
-      <circle cx="100" cy="100" r="52" fill="none" stroke={C.lineStrong} strokeOpacity="0.35" strokeWidth="1.25" />
-      {/* Cross-hairs, clipped to the outer ring, so the field reads as an
-          instrument rather than a target. */}
-      <line x1="100" y1="12" x2="100" y2="188" stroke={C.line} strokeOpacity="0.6" strokeWidth="1" />
-      <line x1="12" y1="100" x2="188" y2="100" stroke={C.line} strokeOpacity="0.6" strokeWidth="1" />
-
-      {/* You. */}
-      <circle cx="100" cy="100" r="14" fill={C.arrived} fillOpacity="0.16" />
-      <circle cx="100" cy="100" r="6.5" fill={C.arrived} />
-
-      {/* An empty slot rather than a contact: nobody is out there, and this is
-          where the first person will appear. Outlined, not filled, so it does
-          not claim somebody is already on the ring — and present at all
-          because a scope with nothing on it is a bullseye, which is the same
-          reasoning that keeps one contact in the 16px favicon. */}
-      <circle
-        className="gt-breathe"
-        cx="152" cy="62" r="6.5"
-        fill="none" stroke={C.ahead} strokeWidth="1.5" strokeDasharray="3 3"
-      />
-    </svg>
-  </div>
-);
 
 // ─── Screen: Trips ──────────────────────────────────────────────────────────
 
@@ -967,7 +908,7 @@ export const HomeDashboard = ({
              The scope is sized against the viewport so it never crowds the
              action off a short phone. */
           <div className="flex flex-col items-center text-center" style={{ paddingTop: 12 }}>
-            <Scope size="clamp(124px, 25vh, 196px)" />
+            <LiveScope size="clamp(124px, 25vh, 196px)" />
             <h1
               style={{
                 fontFamily: FONT.display, fontSize: 24, fontWeight: 500,
