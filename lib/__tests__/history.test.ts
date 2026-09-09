@@ -34,6 +34,7 @@ const live = (over: Partial<LiveTripEntry> = {}): LiveTripEntry => ({
   startedAt: AT("2026-09-08T10:00:00Z"),
   expiresAt: AT("2026-09-08T18:00:00Z"),
   wasCreator: false,
+  pulse: null,
   ...over,
 });
 

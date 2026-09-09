@@ -1,4 +1,5 @@
 import type { Session } from "../session";
+import type { StatusKey } from "../types";
 
 /**
  * The trips behind an account.
@@ -20,6 +21,23 @@ export interface Finisher {
   arrived: boolean | null;
 }
 
+/**
+ * How a live trip is going, from the API.
+ *
+ * Null when no member has reported a position yet — a real state in the first
+ * minute of a trip, and one the UI renders as "nobody located yet". Treat a
+ * missing field as null too: an API older than this client sends none, and
+ * defaulting to zeroes would render as "everyone accounted for, nobody
+ * moving", which is a confident lie.
+ */
+export interface TripPulse {
+  stopped: number;
+  moving: number;
+  arrived: number;
+  worst: StatusKey | null;
+  kmLeftMax: number | null;
+}
+
 /** Still running. The only kind that carries a share code. */
 export interface LiveTripEntry {
   kind: "live";
@@ -31,6 +49,7 @@ export interface LiveTripEntry {
   startedAt: number;
   expiresAt: number;
   wasCreator: boolean;
+  pulse: TripPulse | null;
 }
 
 /** Over, but the sweep has not taken its record yet, so there is no roster. */
@@ -81,6 +100,19 @@ export interface HistoryDeps {
   fetchFn?: typeof fetch;
 }
 
+function asPulse(raw: unknown): TripPulse | null {
+  if (raw === null || typeof raw !== "object") return null;
+  const p = raw as Partial<TripPulse>;
+  if (typeof p.stopped !== "number" || typeof p.moving !== "number") return null;
+  return {
+    stopped: p.stopped,
+    moving: p.moving,
+    arrived: typeof p.arrived === "number" ? p.arrived : 0,
+    worst: (p.worst ?? null) as StatusKey | null,
+    kmLeftMax: typeof p.kmLeftMax === "number" ? p.kmLeftMax : null,
+  };
+}
+
 export function createHistoryClient(deps: HistoryDeps): HistoryClient {
   const doFetch = deps.fetchFn ?? globalThis.fetch;
 
@@ -97,8 +129,8 @@ export function createHistoryClient(deps: HistoryDeps): HistoryClient {
       try {
         const res = await send("/v1/me/trips/live");
         if (!res.ok) return [];
-        const body = (await res.json()) as { trips?: LiveTripEntry[] };
-        return body.trips ?? [];
+        const body = (await res.json()) as { trips?: (LiveTripEntry & { pulse?: unknown })[] };
+        return (body.trips ?? []).map((t) => ({ ...t, pulse: asPulse(t.pulse) }));
       } catch {
         // Home renders perfectly well with no live trips, and an error banner
         // over the two buttons somebody came here to press helps nobody.

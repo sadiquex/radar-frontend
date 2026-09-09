@@ -145,3 +145,40 @@ describe("offlineHistory", () => {
     await expect(offlineHistory.forgetAll()).resolves.toBeUndefined();
   });
 });
+
+const session = { get: async () => ({ deviceId: "d1", token: "tok-1" }) } as never;
+
+const reply = (body: unknown): Response =>
+  ({ ok: true, status: 200, json: async () => body }) as unknown as Response;
+
+const entry = (over: Record<string, unknown> = {}) => ({
+  kind: "live", tripId: "t1", shareCode: "ABC123", name: null, destinationName: null,
+  memberCount: 2, startedAt: 1, expiresAt: 2, wasCreator: true, ...over,
+});
+
+const clientWith = (body: unknown) =>
+  createHistoryClient({
+    baseUrl: "http://api.test", session,
+    fetchFn: (async () => reply(body)) as unknown as typeof fetch,
+  });
+
+describe("history.live", () => {
+  it("keeps a pulse the server sent", async () => {
+    const pulse = { stopped: 1, moving: 2, arrived: 0, worst: "stopped", kmLeftMax: 9.1 };
+    const [got] = await clientWith({ trips: [entry({ pulse })] }).live();
+    expect(got!.pulse).toEqual(pulse);
+  });
+
+  it("reads a missing pulse as null, not as zeroes", async () => {
+    // An API older than this client sends no pulse at all. Defaulting to
+    // {0,0,0} would render as "everyone accounted for, nobody moving", which
+    // is a confident lie; null renders as "nobody located yet".
+    const [got] = await clientWith({ trips: [entry()] }).live();
+    expect(got!.pulse).toBeNull();
+  });
+
+  it("reads an explicit null pulse as null", async () => {
+    const [got] = await clientWith({ trips: [entry({ pulse: null })] }).live();
+    expect(got!.pulse).toBeNull();
+  });
+});
