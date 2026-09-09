@@ -1,11 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import {
   Bell, BellOff, ChevronRight, MapPin, MoreHorizontal, Navigation, Plus,
 } from "lucide-react";
 import {
   Avatar, C, FONT, Horizon, IconButton, PAD_T, STATUS, StatusPill,
-  VerdictBlock, type LocationNotice, type Member,
+  VerdictBlock, partition, type LocationNotice, type Member,
 } from "./Radar";
 import { TAB_BAR_SPACE } from "./TabBar";
 import { ATTENTION_ORDER } from "@/lib/pulse";
@@ -40,6 +41,7 @@ export function GroupScreen({
   onOpenMap: () => void;
   onInvite: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const anyLocated = members.some((m) => m.located);
   const totalKm = Math.max(1, ...members.filter((m) => m.located).map((m) => m.kmLeft));
 
@@ -50,7 +52,21 @@ export function GroupScreen({
   // against a status at all; they rank last instead.
   const rank = (m: Member) =>
     m.located ? ATTENTION_ORDER.indexOf(m.status) : ATTENTION_ORDER.length;
-  const shown = [...members].sort((a, b) => rank(a) - rank(b));
+
+  // `partition` still decides the split — outliers (anyone not located, or
+  // located but not travelling `with` the pack — an arrived rider counts,
+  // deliberately) versus everyone else — but not the order within it: its own
+  // internal ordering (`["stopped","behind","arrived","ahead"]`) predates
+  // ATTENTION_ORDER and disagrees with it, and ATTENTION_ORDER is the one
+  // order shared by Home's cards, Home's contacts and this list. So split
+  // with `partition`, then re-sort each side by ATTENTION_ORDER. Don't delete
+  // either half thinking the other makes it redundant — they do different
+  // jobs.
+  const { outliers, together } = partition(members);
+  const byAttention = (a: Member, b: Member) => rank(a) - rank(b);
+  const shown = expanded
+    ? [...outliers, ...together].sort(byAttention)
+    : [...outliers].sort(byAttention);
 
   return (
     <div className="flex flex-col h-full relative">
@@ -167,6 +183,44 @@ export function GroupScreen({
             <ChevronRight size={20} style={{ color: C.faint }} />
           </button>
         ))}
+
+        {!expanded && together.length > 0 && (
+          <div
+            style={{
+              borderTop: `1px solid ${C.line}`,
+              borderBottom: outliers.length === 0 ? `1px solid ${C.line}` : undefined,
+              paddingTop: 14, paddingBottom: 14,
+              fontFamily: FONT.body, fontSize: 15, color: C.muted, lineHeight: 1.5,
+            }}
+          >
+            {outliers.length === 0
+              ? "Nobody is ahead, behind or stopped."
+              : `${together.length === 1 ? "1 rider is" : `${together.length} riders are`} with the group.`}
+            <br />
+            <button
+              onClick={() => setExpanded(true)}
+              style={{
+                fontFamily: FONT.body, fontSize: 15, color: C.text,
+                fontWeight: 600, textDecoration: "underline", minHeight: 44,
+              }}
+            >
+              Show all {members.length} {members.length === 1 ? "rider" : "riders"}
+            </button>
+          </div>
+        )}
+
+        {expanded && (
+          <button
+            onClick={() => setExpanded(false)}
+            className="w-full"
+            style={{
+              borderTop: `1px solid ${C.line}`, minHeight: 44,
+              fontFamily: FONT.body, fontSize: 15, color: C.muted, fontWeight: 600,
+            }}
+          >
+            Show only who needs attention
+          </button>
+        )}
 
         <button
           onClick={onInvite}
