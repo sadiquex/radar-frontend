@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  Group, MemberView, MapView, Ended, Toast, MenuSheet, GlanceView,
+  MemberView, MapView, Ended, Toast, MenuSheet, GlanceView,
   memberFromParticipant, C, FONT, type Member,
 } from "../../../components/Radar";
+import { GroupScreen } from "../../../components/GroupScreen";
 import { useHideTabBar } from "../../../components/TabBarContext";
 import { useAccount } from "../../../hooks/useAccount";
 import { useGeolocation } from "../../../hooks/useGeolocation";
@@ -449,7 +450,7 @@ export default function GroupPage() {
       )}
 
       {view.kind === "group" && (
-        <Group
+        <GroupScreen
           tripName={trip.name}
           destinationName={trip.destinationName}
           members={members}
