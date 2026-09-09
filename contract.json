@@ -53,6 +53,7 @@
       "expected": { "a": "ahead", "b": "with", "c": "with" }
     }
   ],
+  "attentionOrder": ["stopped", "behind", "ahead", "with", "arrived"],
   "tripTtlMs": 28800000,
   "positionWrite": {
     "minIntervalMs": 20000,
