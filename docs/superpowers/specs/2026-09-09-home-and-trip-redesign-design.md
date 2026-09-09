@@ -153,7 +153,7 @@ One contact per live trip:
 | Size | Member count | `memberCount` |
 
 **Angle deliberately encodes nothing.** There is no second dimension worth showing and inventing
-one would be a lie; what it must be is *stable*, because `useLiveTrips` polls every four seconds
+one would be a lie; what it must be is *stable*, because `useLiveTrips` polls every 30 seconds
 and a contact that jumps on every refresh reads as movement that did not happen.
 
 **A trip with `pulse: null` renders the dashed outlined slot**, not a filled contact. That
@@ -255,9 +255,9 @@ attempt one.
 **The pulse costs a query per dashboard load.** `/v1/me/trips/live` currently reads one indexed
 table join; it will now also read the positions of every member of every live trip the caller is
 in. That is bounded — a person is in a handful of live trips at once, each with a handful of
-members — but it is polled every four seconds by every open dashboard, and it is the first
-endpoint here whose cost scales with other people's data rather than the caller's. Worth watching
-before it is worth optimising.
+members — and each open dashboard only polls it every 30 seconds, so the added load per poll is
+modest. It is still the first endpoint here whose cost scales with other people's data rather than
+the caller's. Worth watching before it is worth optimising.
 
 **Two status engines is a liability the goldens contain but do not remove.** The honest long-term
 answer is one engine, shared. That is a bigger change than this, and §5 is the containment.
