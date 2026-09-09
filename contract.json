@@ -6,6 +6,42 @@
   },
   "movedThresholdM": 20,
   "arriveRadiusM": 100,
+  "clusterRadiusM": 100,
+  "aheadBehindMarginM": 150,
+  "stoppedMs": 300000,
+  "statusGoldens": [
+    {
+      "name": "stopped beats with-group, and a straggler reads as behind",
+      "now": 1000000,
+      "destination": { "lat": 5.6037, "lng": -0.187 },
+      "members": [
+        { "id": "a", "lat": 5.6216864, "lng": -0.187, "lastMovedAt": 600000 },
+        { "id": "b", "lat": 5.6216864, "lng": -0.187, "lastMovedAt": 1000000 },
+        { "id": "c", "lat": 5.6486661, "lng": -0.187, "lastMovedAt": 1000000 }
+      ],
+      "expected": { "a": "stopped", "b": "with", "c": "behind" }
+    },
+    {
+      "name": "arrival outranks stopped",
+      "now": 1000000,
+      "destination": { "lat": 5.6037, "lng": -0.187 },
+      "members": [
+        { "id": "a", "lat": 5.6041496, "lng": -0.187, "lastMovedAt": 600000 }
+      ],
+      "expected": { "a": "arrived" }
+    },
+    {
+      "name": "with no destination, separation is the only verdict",
+      "now": 1000000,
+      "destination": null,
+      "members": [
+        { "id": "a", "lat": 5.6037, "lng": -0.187, "lastMovedAt": 1000000 },
+        { "id": "b", "lat": 5.6037, "lng": -0.187, "lastMovedAt": 1000000 },
+        { "id": "c", "lat": 5.6486661, "lng": -0.187, "lastMovedAt": 1000000 }
+      ],
+      "expected": { "a": "with", "b": "with", "c": "behind" }
+    }
+  ],
   "tripTtlMs": 28800000,
   "positionWrite": {
     "minIntervalMs": 20000,

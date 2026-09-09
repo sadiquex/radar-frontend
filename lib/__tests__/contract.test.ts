@@ -174,4 +174,27 @@ describe("contract.json conformance", () => {
     );
     expect(messages).toEqual([contract.alertTemplates.everyoneArrived]);
   });
+
+  it.each(contract.statusGoldens)("answers the shared golden: $name", (golden) => {
+    // This is the frontend's half of the two-engine agreement. The backend
+    // runs the identical fixtures against its own port, so a rule that changes
+    // on one side fails on the other rather than silently disagreeing on a
+    // dashboard.
+    const participants = golden.members.map((m) => ({
+      id: m.id,
+      tripId: "t1",
+      displayName: m.id,
+      latitude: m.lat,
+      longitude: m.lng,
+      status: null as StatusKey | null,
+      lastMovedAt: m.lastMovedAt,
+      lastSeenAt: golden.now,
+    }));
+
+    const got = computeStatuses(participants, golden.destination, golden.now);
+
+    for (const [id, expected] of Object.entries(golden.expected)) {
+      expect(got[id]?.status, `member ${id} in "${golden.name}"`).toBe(expected);
+    }
+  });
 });
