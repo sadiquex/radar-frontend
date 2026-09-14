@@ -48,6 +48,7 @@ const ERROR_CODES: readonly ApiErrorCode[] = [
   "expired",
   "invalid",
   "trip_full",
+  "already_in_trip",
   "rate_limited",
   "internal",
   "offline",
@@ -106,7 +107,7 @@ export function createHttpData(deps: HttpDataDeps): DataClient {
     if (typeof body.serverNow === "number") clock.record(body.serverNow);
 
     if (!res.ok) {
-      throw new ApiError(asErrorCode(body.error, res.status), res.status);
+      throw new ApiError(asErrorCode(body.error, res.status), res.status, undefined, body.detail);
     }
     return payload as T;
   }

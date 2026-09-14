@@ -234,6 +234,26 @@ describe("createHttpData — errors that must surface", () => {
     });
   });
 
+  it("carries the trip you are already in off the wire", async () => {
+    // The detail is the whole point of this refusal: without it the join
+    // screen knows something is wrong but cannot offer to fix it.
+    const { data } = makeClient([
+      [
+        409,
+        {
+          error: "already_in_trip",
+          detail: { id: "trip-1", name: "Test Leg", shareCode: "ABC234" },
+          serverNow: 1_000_000,
+        },
+      ],
+    ]);
+    await expect(data.joinTrip(TRIP_ID, "dev-1", "Ama")).rejects.toMatchObject({
+      code: "already_in_trip",
+      status: 409,
+      detail: { id: "trip-1", name: "Test Leg", shareCode: "ABC234" },
+    });
+  });
+
   it("throws a typed error when a position write is refused", async () => {
     // useGeolocation stops the watch on this rather than throwing inside a
     // watchPosition callback forever.
