@@ -34,6 +34,11 @@ export function VerdictDemo() {
   const [running, setRunning] = useState(false);
   const hostRef = useRef<HTMLDivElement | null>(null);
 
+  /** The wrap is a jump, not a move: animating tick 71 → 0 sweeps every dot
+   *  backwards across the whole strip. The seam is hidden by cutting rather
+   *  than tweening that one frame. */
+  const wrapped = tick === 0;
+
   // A setInterval driving a demo nobody is looking at is a battery cost, and
   // this page is mostly read on a phone.
   useEffect(() => {
@@ -113,8 +118,8 @@ export function VerdictDemo() {
             >
               Everyone&rsquo;s position reduced to one sentence and one number, because a rider at
               effort reads one field, not eight. This is the engine running, not a recording —
-              four riders on the road to {CONVOY_DESTINATION.name}, with one falling back, catching
-              up, and arriving.
+              four riders on the road to {CONVOY_DESTINATION.name}: one falls back and catches up,
+              then another reaches the destination.
             </p>
           </div>
 
@@ -184,7 +189,7 @@ export function VerdictDemo() {
                         left: `${x * 100}%`, top: "50%", transform: "translate(-50%,-50%)",
                         width: 22, height: 22, borderRadius: 999,
                         background: STATUS[r.status].color, color: C.raised,
-                        transition: "left 560ms linear",
+                        transition: wrapped ? "none" : "left 560ms linear",
                       }}
                     >
                       <Glyph s={r.status} size={12} />
