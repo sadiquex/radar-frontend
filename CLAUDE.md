@@ -36,6 +36,8 @@ Next.js 14 App Router + TypeScript + Tailwind + MapLibre GL. Navigation is **rea
 - `app/app/trips/[tripId]/page.tsx` — one past trip. A leaf **outside** the tab group: own Back, and a map that wants the height
 - `app/join/page.tsx` — join by typed code; `app/t/[code]/join/page.tsx` — join by link (both render `app/components/JoinFlow.tsx`)
 - `app/app/(tabs)/t/[code]/page.tsx` — the live group view (the orchestrator: geolocation, status computation, notifications, member/map sub-views, rendered through `GroupScreen`). **Inside** the tab group now: the signed-in shell's tab bar renders under it with nothing highlighted (a trip isn't one of the four sections), and the screen no longer carries a bottom action bar of its own — Map is a floating pill instead. The page stands the bar down itself only for the map and glance sub-views, the two that want the whole viewport
+- **The landing page is a consumer of `lib/`, never an editor of it.** `app/page.tsx` plus `app/components/landing/` render at marketing scale and import only what is scale-free from `Radar.tsx` (`C`, `FONT`, `STATUS`, `Glyph`, `Mark`) — that file is inline-styled for a 460px frame and its screens do not survive a 1200px canvas. The verdict shown on the page is `computeVerdict()`'s real output over the scripted coordinates in `lib/landing/convoy.ts`, so retuning a threshold in `lib/status.ts` changes the marketing page too. That is intended.
+- **`.gt-night` is the dark palette as a class**, sharing one declaration block with `:root[data-theme="dark"]` in `globals.css`. It is written on the line *above* that selector because `tokens.test.ts` parses for the literal string.
 
 Key facts that span files / aren't obvious from skimming:
 

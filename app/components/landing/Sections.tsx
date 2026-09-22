@@ -1,3 +1,8 @@
+// No animation and no hooks live here — this is a client component only
+// because it dots into `C`, `FONT` and `STATUS`, plain exported values from
+// the client-only `Radar.tsx`. A server component cannot import those, so the
+// boundary is inherited, not chosen. Don't remove this on the assumption it's
+// dead weight; the build breaks without it.
 "use client";
 
 import Link from "next/link";

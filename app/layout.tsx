@@ -39,6 +39,9 @@ const mono = DM_Mono({
 });
 
 export const metadata: Metadata = {
+  // Open Graph image URLs must be absolute. NEXT_PUBLIC_SITE_URL lets a
+  // preview deploy advertise itself rather than production.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://radar-for-sports.vercel.app"),
   title: "Radar",
   description:
     "Temporary location sharing for groups moving together. Join in seconds, no install. Trips expire in 8 hours.",
