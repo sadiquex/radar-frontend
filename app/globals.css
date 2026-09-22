@@ -94,6 +94,16 @@
   }
 }
 
+/* The night ground, for a section that must stay dark inside a light page —
+   the landing hero. A second selector rather than a copy: two copies of thirty
+   values drift, and `tokens.test.ts` only contrast-tests one of them. Custom
+   properties resolve from the nearest declaring ancestor, so a `.gt-night`
+   section beats :root in either theme, and in dark mode it declares identical
+   values and changes nothing.
+
+   `.gt-night` is written FIRST so the literal `:root[data-theme="dark"] {`
+   that tokens.test.ts searches for is still present verbatim. */
+.gt-night,
 :root[data-theme="dark"] {
   color-scheme: dark;
   --c-ground: #0E1116;

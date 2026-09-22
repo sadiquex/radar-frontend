@@ -104,6 +104,15 @@ describe("theme declaration hygiene", () => {
     expect(css).toContain('[data-theme="dark"] .maplibregl-canvas');
     expect(css).not.toMatch(/\[data-theme="dark"\]\s+\.maplibregl-map\s*\{[^}]*filter/);
   });
+
+  it("shares one declaration block between the dark theme and the night section", () => {
+    // The landing hero must be dark inside a light page, and :root[data-theme]
+    // matches only <html>. A second block repeating thirty values would drift,
+    // and only one of the two copies is contrast-tested above. `.gt-night` is
+    // written on the line ABOVE the selector so the literal string the parser
+    // searches for is still present verbatim.
+    expect(css).toMatch(/\.gt-night,\s*\n:root\[data-theme="dark"\] \{/);
+  });
 });
 
 // ─── Type scale ─────────────────────────────────────────────────────────────
@@ -161,7 +170,26 @@ describe("type scale floor", () => {
   // unguarded, and the <input> rule below only ever looked at Radar.tsx while
   // the one text input somebody would actually get wrong lived elsewhere.
   const componentsDir = join(root, "app", "components");
-  const SCREENS = readdirSync(componentsDir).filter((f) => f.endsWith(".tsx"));
+
+  /**
+   * Every component, at any depth. Non-recursive `readdirSync` was the same
+   * bug as the hand-written list it replaced, one level up: `landing/` sits in
+   * a subdirectory and would have been silently unguarded, which is exactly
+   * how the 9px horizon labels survived the first time.
+   *
+   * Paths are returned relative to `componentsDir`, so `join(componentsDir, f)`
+   * below and the `%s` test titles keep working unchanged.
+   */
+  const tsxUnder = (dir: string, prefix = ""): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory()
+        ? tsxUnder(join(dir, e.name), `${prefix}${e.name}/`)
+        : e.name.endsWith(".tsx")
+        ? [`${prefix}${e.name}`]
+        : []
+    );
+
+  const SCREENS = tsxUnder(componentsDir);
 
   it("finds the screen components", () => {
     // A glob that matches nothing passes every assertion under it.
