@@ -15,7 +15,12 @@ export const metadata: Metadata = {
     type: "website",
     images: [{ url: "/og.jpg", width: 1920, height: 1080, alt: "Radar" }],
   },
-  twitter: { card: "summary_large_image", title: "Radar", description: DESCRIPTION, images: ["/og.jpg"] },
+  twitter: {
+    card: "summary_large_image",
+    title: "Radar — Know where everyone is. Without the calls.",
+    description: DESCRIPTION,
+    images: ["/og.jpg"],
+  },
 };
 
 /**
@@ -33,6 +38,13 @@ export default function LandingPage() {
     <>
       <main>
         <Hero />
+      </main>
+      {/* Act II and the footer are pinned to the daylight palette via
+          `.gt-day` (see globals.css) regardless of the visitor's OS theme or
+          an explicit dark choice: the two-act crossing from the dark hero
+          into daylight is the page's whole argument, and it must not
+          disappear for a dark-mode visitor. */}
+      <div className="gt-day">
         <VerdictDemo />
         <Statuses />
         <Forgets />
@@ -40,8 +52,8 @@ export default function LandingPage() {
         <HowItWorks />
         <Craft />
         <Close />
-      </main>
-      <SiteFooter />
+        <SiteFooter />
+      </div>
     </>
   );
 }

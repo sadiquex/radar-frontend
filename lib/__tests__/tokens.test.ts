@@ -21,11 +21,18 @@ const contrast = (a: string, b: string) => {
   return (hi + 0.05) / (lo + 0.05);
 };
 
-/** Pull one theme's token block out of globals.css. */
+/**
+ * Pull one theme's token block out of globals.css.
+ *
+ * Comments are stripped before searching: a bare `indexOf` can anchor inside
+ * a comment that happens to contain the selector text, which is exactly the
+ * bug this branch already hit once.
+ */
 function tokens(selector: string): Record<string, string> {
-  const at = css.indexOf(selector);
+  const stripped = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const at = stripped.indexOf(selector);
   expect(at, `${selector} missing from globals.css`).toBeGreaterThan(-1);
-  const body = css.slice(at, css.indexOf("}", at));
+  const body = stripped.slice(at, stripped.indexOf("}", at));
   const out: Record<string, string> = {};
   for (const [, name, value] of body.matchAll(/--c-([a-z0-9-]+):\s*(#[0-9a-fA-F]{6})/g)) {
     out[name] = value;
@@ -112,6 +119,10 @@ describe("theme declaration hygiene", () => {
     // written on the line ABOVE the selector so the literal string the parser
     // searches for is still present verbatim.
     expect(css).toMatch(/\.gt-night,\n:root\[data-theme="dark"\] \{/);
+  });
+
+  it("shares one declaration block between the light theme and the day section", () => {
+    expect(css).toMatch(/\.gt-day,\n:root \{/);
   });
 });
 
