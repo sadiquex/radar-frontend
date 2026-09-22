@@ -111,7 +111,7 @@ describe("theme declaration hygiene", () => {
     // and only one of the two copies is contrast-tested above. `.gt-night` is
     // written on the line ABOVE the selector so the literal string the parser
     // searches for is still present verbatim.
-    expect(css).toMatch(/\.gt-night,\s*\n:root\[data-theme="dark"\] \{/);
+    expect(css).toMatch(/\.gt-night,\n:root\[data-theme="dark"\] \{/);
   });
 });
 

@@ -101,8 +101,9 @@
    section beats :root in either theme, and in dark mode it declares identical
    values and changes nothing.
 
-   `.gt-night` is written FIRST so the literal `:root[data-theme="dark"] {`
-   that tokens.test.ts searches for is still present verbatim. */
+   `.gt-night` is written first so that the explicit dark selector still
+   appears verbatim, immediately followed by its opening brace, where
+   tokens.test.ts looks for it. */
 .gt-night,
 :root[data-theme="dark"] {
   color-scheme: dark;
