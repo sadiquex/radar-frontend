@@ -130,8 +130,12 @@ export function Hero() {
               </Link>
             </div>
 
+            {/* Not "no account needed". Google sign-in exists and `signInAvailable`
+                is true whenever the API and a client id are configured; claiming
+                otherwise misrepresents the product. The accounts section in
+                Sections.tsx carries the full story. */}
             <p style={{ fontFamily: FONT.body, fontSize: 13, color: C.faint, marginTop: 18 }}>
-              No install. No account needed. Works in any browser.
+              Nothing to install. An account is optional.
             </p>
           </div>
 
