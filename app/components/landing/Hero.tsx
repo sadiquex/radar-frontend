@@ -103,8 +103,9 @@ export function Hero() {
                 fontSize: "clamp(1rem, 1.2vw, 1.1875rem)", lineHeight: 1.55,
               }}
             >
-              For groups moving together — a cycling group, a convoy, a hiking party. Join from a
-              link in seconds, with nothing to install. Every trip expires in 8 hours.
+              For groups moving together — a run club, a cycling group, a convoy, a hiking
+              party. Join from a link in seconds, with nothing to install. Every trip expires in
+              8 hours.
             </p>
 
             <div className="flex flex-wrap gap-3" style={{ marginTop: 34 }}>
