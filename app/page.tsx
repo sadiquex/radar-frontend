@@ -38,20 +38,24 @@ export default function LandingPage() {
     <>
       <main>
         <Hero />
+        {/* Act II is pinned to the daylight palette via `.gt-day` (see
+            globals.css) regardless of the visitor's OS theme or an explicit
+            dark choice: the two-act crossing from the dark hero into
+            daylight is the page's whole argument, and it must not disappear
+            for a dark-mode visitor. */}
+        <div className="gt-day">
+          <VerdictDemo />
+          <Statuses />
+          <Forgets />
+          <Accounts />
+          <HowItWorks />
+          <Craft />
+          <Close />
+        </div>
       </main>
-      {/* Act II and the footer are pinned to the daylight palette via
-          `.gt-day` (see globals.css) regardless of the visitor's OS theme or
-          an explicit dark choice: the two-act crossing from the dark hero
-          into daylight is the page's whole argument, and it must not
-          disappear for a dark-mode visitor. */}
+      {/* Same pinning for the footer, which stays outside <main> so it keeps
+          its contentinfo landmark. */}
       <div className="gt-day">
-        <VerdictDemo />
-        <Statuses />
-        <Forgets />
-        <Accounts />
-        <HowItWorks />
-        <Craft />
-        <Close />
         <SiteFooter />
       </div>
     </>
