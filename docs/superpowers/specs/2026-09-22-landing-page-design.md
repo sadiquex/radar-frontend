@@ -235,6 +235,19 @@ Sign-in is described, **not** offered as a call to action — the same posture t
 
 **Footer.** `Mark` + Radar, the one-line description, links to `/app` and `/join`. No legal links (§3).
 
+### 6.0 Photography
+
+Two full-bleed photographic bands, added after the first build because the page read as a wall of type. Both are Pexels stock, licensed for commercial use; provenance is in `public/IMAGE-CREDITS.md`.
+
+- **The crossing** (`band-road.jpg`), between the night hero and the daylight body. Riders and boda-bodas strung out unevenly down a red laterite road — which is the situation the verdict engine exists to read, so the image argues rather than decorates. West African, matching the product's actual audience and the Akosombo and Osu already in its copy.
+- **Arrival** (`band-arrival.jpg`), above the closing call to action.
+
+**A third band was designed and dropped.** It would have sat beside §5 and shown a phone on a handlebar in harsh sun, *demonstrating* the sunlight-legibility argument instead of asserting it. No stock photograph does that: every candidate had no screen visible, a loud mount fighting the palette, or a phone home screen, which is wrong for a web app. On a page whose thesis is that its claims are checkable, an image that gestures at a claim without evidencing it is the wrong kind of decoration, so §5 keeps making the argument in words. Worth revisiting if a real photograph is ever taken.
+
+**Treatment.** `saturate(0.5) contrast(1.06)`, plus a fade into the ground at both edges. The fades are the load-bearing part: the crossing band spans two different grounds, dissolving into `#0E1116` above and `#F5F3EE` below. Neither hex is written — `C` holds `var()` references and cannot express a colour value — so each fade instead carries the class that makes `--c-ground` resolve to the ground it needs (`.gt-night` above, `.gt-day` below). The tokens stay the only definition of both.
+
+`PhotoBand` takes a token *name* (`topSurface="sunken"`), not a token value, because `app/page.tsx` exports `metadata` and is therefore a server component that cannot read `C` out of the client-only `Radar.tsx` at all.
+
 ### 6.1 Files
 
 ```
@@ -245,6 +258,9 @@ app/components/landing/Sections.tsx     act II §2–§6 + footer (presentationa
 lib/landing/convoy.ts                   the script
 lib/landing/__tests__/convoy.test.ts
 public/og.jpg                           copied from brag-output/brag.jpg
+public/band-road.jpg                    the crossing (1800px, q55)
+public/band-arrival.jpg                 arrival (1800px, q55)
+public/IMAGE-CREDITS.md                 provenance for both
 ```
 
 Three components, not nine. §2–§6 are static presentation with no state between them and splitting them buys nothing today.

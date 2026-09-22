@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Hero } from "./components/landing/Hero";
 import { VerdictDemo } from "./components/landing/VerdictDemo";
-import { Statuses, Forgets, Accounts, HowItWorks, Craft, Close, SiteFooter } from "./components/landing/Sections";
+import {
+  Statuses, Forgets, Accounts, HowItWorks, Craft, Close, SiteFooter, PhotoBand,
+} from "./components/landing/Sections";
 
 const DESCRIPTION =
   "Temporary location sharing for groups moving together. One sentence and one number instead of a map full of pins. Join from a link in seconds, no install, and every trip expires in 8 hours.";
@@ -38,6 +40,16 @@ export default function LandingPage() {
     <>
       <main>
         <Hero />
+        {/* The crossing. Riders strung out unevenly down an open road — the
+            situation the verdict engine exists to read — placed exactly where
+            the night hero gives way to daylight, fading out of one ground and
+            into the other. */}
+        <PhotoBand
+          src="/band-road.jpg"
+          topScope="gt-night"
+          height="clamp(300px, 42vh, 520px)"
+          focal="center 34%"
+        />
         {/* Act II is pinned to the daylight palette via `.gt-day` (see
             globals.css) regardless of the visitor's OS theme or an explicit
             dark choice: the two-act crossing from the dark hero into
@@ -50,6 +62,10 @@ export default function LandingPage() {
           <Accounts />
           <HowItWorks />
           <Craft />
+          {/* Arrival, before the last call to action. The top edge fades into
+              `sunken` because Craft sits on it; the bottom into `ground`,
+              which is what Close sits on. */}
+          <PhotoBand src="/band-arrival.jpg" topSurface="sunken" height="clamp(200px, 28vh, 340px)" />
           <Close />
         </div>
       </main>

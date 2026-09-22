@@ -5,6 +5,7 @@
 // dead weight; the build breaks without it.
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { C, FONT, STATUS, Glyph, Mark } from "../Radar";
@@ -59,6 +60,79 @@ const Body = ({ children }: { children: React.ReactNode }) => (
   >
     {children}
   </p>
+);
+
+// ─── Photographic bands ─────────────────────────────────────────────────────
+/**
+ * A full-bleed photograph, dissolved into the page rather than placed on it.
+ *
+ * Stock photography sits badly in a design this flat unless it is pulled into
+ * the palette, so every band gets the same two treatments: desaturated toward
+ * the app's muted register, and faded into the ground at both edges instead of
+ * stopping on a hard line.
+ *
+ * The fades are the part worth reading twice. The crossing band spans the
+ * boundary between the night hero and the daylight body, so its top edge has
+ * to dissolve into the dark ground and its bottom edge into the cream one —
+ * two different grounds, in one element. Rather than hard-code either hex
+ * (which `C` cannot express anyway, since it holds `var()` references), each
+ * fade carries the class that makes `--c-ground` resolve to the ground it
+ * needs: `.gt-night` above, `.gt-day` below. The tokens stay the only
+ * definition of both values.
+ *
+ * Decorative: `alt=""` marks it so, and everything these images suggest is
+ * already said in words by the sections around them.
+ */
+export const PhotoBand = ({
+  src,
+  height = "clamp(220px, 32vh, 400px)",
+  /** Which ground the TOP edge dissolves into. The bottom is always daylight. */
+  topScope = "gt-day",
+  /**
+   * Which surface the top edge meets, named rather than passed as a value:
+   * `app/page.tsx` is a server component (it exports `metadata`) and so cannot
+   * read `C` out of the client-only `Radar.tsx` at all. It names the token; the
+   * mapping happens here, on the client side of the boundary.
+   */
+  topSurface = "ground",
+  /**
+   * `object-position`. A band is a narrow crop of a 3:2 frame, so the default
+   * centre throws away whichever part of the composition carries it — on the
+   * crossing band that is the receding road and the horizon, which sit in the
+   * upper third.
+   */
+  focal = "center",
+}: {
+  src: string;
+  height?: string;
+  topScope?: "gt-night" | "gt-day";
+  topSurface?: "ground" | "sunken";
+  focal?: string;
+}) => (
+  <div className="relative w-full overflow-hidden" style={{ height }} aria-hidden>
+    <Image
+      src={src}
+      alt=""
+      fill
+      sizes="100vw"
+      quality={72}
+      style={{ objectFit: "cover", objectPosition: focal, filter: "saturate(0.5) contrast(1.06)" }}
+    />
+    <div
+      className={topScope}
+      style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: "44%",
+        background: `linear-gradient(to bottom, ${topSurface === "sunken" ? C.sunken : C.ground}, transparent)`,
+      }}
+    />
+    <div
+      className="gt-day"
+      style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: "44%",
+        background: `linear-gradient(to top, ${C.ground}, transparent)`,
+      }}
+    />
+  </div>
 );
 
 // ─── §2 The five statuses ───────────────────────────────────────────────────
