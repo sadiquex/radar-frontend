@@ -1,5 +1,6 @@
 import { Hero } from "./components/landing/Hero";
 import { VerdictDemo } from "./components/landing/VerdictDemo";
+import { Statuses, Forgets, Accounts, HowItWorks, Craft, Close, SiteFooter } from "./components/landing/Sections";
 
 /**
  * The landing page.
@@ -10,9 +11,18 @@ import { VerdictDemo } from "./components/landing/VerdictDemo";
  */
 export default function LandingPage() {
   return (
-    <main>
-      <Hero />
-      <VerdictDemo />
-    </main>
+    <>
+      <main>
+        <Hero />
+        <VerdictDemo />
+        <Statuses />
+        <Forgets />
+        <Accounts />
+        <HowItWorks />
+        <Craft />
+        <Close />
+      </main>
+      <SiteFooter />
+    </>
   );
 }
