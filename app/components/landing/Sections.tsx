@@ -102,12 +102,18 @@ export const PhotoBand = ({
    * upper third.
    */
   focal = "center",
+  /**
+   * How deep each edge fade runs. The default suits a tall band; a short one
+   * needs less, or the two fades meet in the middle and leave nothing but haze.
+   */
+  fade = "44%",
 }: {
   src: string;
   height?: string;
   topScope?: "gt-night" | "gt-day";
   topSurface?: "ground" | "sunken";
   focal?: string;
+  fade?: string;
 }) => (
   <div className="relative w-full overflow-hidden" style={{ height }} aria-hidden>
     <Image
@@ -121,14 +127,14 @@ export const PhotoBand = ({
     <div
       className={topScope}
       style={{
-        position: "absolute", top: 0, left: 0, right: 0, height: "44%",
+        position: "absolute", top: 0, left: 0, right: 0, height: fade,
         background: `linear-gradient(to bottom, ${topSurface === "sunken" ? C.sunken : C.ground}, transparent)`,
       }}
     />
     <div
       className="gt-day"
       style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: "44%",
+        position: "absolute", bottom: 0, left: 0, right: 0, height: fade,
         background: `linear-gradient(to top, ${C.ground}, transparent)`,
       }}
     />
@@ -384,7 +390,10 @@ const CRAFT = [
   // The trailing caveat is load-bearing: the app only claims a wake lock when
   // `"wakeLock" in navigator`, so the landing page must not claim more.
   { title: "The screen stays awake", body: "Geolocation stops being delivered when the screen sleeps, which is exactly when the group needs it. Radar holds the screen on for the length of a trip, wherever the browser allows it." },
-  { title: "Writes speed up as you do", body: "Every 20 seconds at rest, every 5 at 30 km/h. A cyclist covers 30 metres in under four seconds." },
+  // Three tiers, not two — `writePolicyFor` in lib/geo.ts splits at 2 m/s and
+  // 6 m/s (7.2 and 21.6 km/h). The middle tier is running pace, and the earlier
+  // copy skipped it, which quietly wrote runners out of a product tuned for them.
+  { title: "Writes speed up as you do", body: "Every 20 seconds at rest, every 10 at running pace, every 5 once you're riding. A cyclist at 30 km/h covers 30 metres in under four seconds." },
 ];
 
 export const Craft = () => (

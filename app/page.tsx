@@ -58,6 +58,17 @@ export default function LandingPage() {
         <div className="gt-day">
           <VerdictDemo />
           <Statuses />
+          {/* One runner out front, the chase group behind — ahead and behind,
+              shown immediately after the section that defines them. Statuses
+              sits on `sunken`, so the top edge fades into that rather than
+              into the ground Forgets uses below. */}
+          <PhotoBand
+            src="/band-runners.jpg"
+            topSurface="sunken"
+            height="clamp(260px, 36vh, 440px)"
+            focal="center 78%"
+            fade="32%"
+          />
           <Forgets />
           <Accounts />
           <HowItWorks />
