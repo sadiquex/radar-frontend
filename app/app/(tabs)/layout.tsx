@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { PhoneFrame } from "../components/PhoneFrame";
-import { TabBar, type TabKey } from "../components/TabBar";
-import { TabBarContext, type TabBarControl } from "../components/TabBarContext";
-import { useAccount } from "../hooks/useAccount";
+import { PhoneFrame } from "../../components/PhoneFrame";
+import { TabBar, type TabKey } from "../../components/TabBar";
+import { TabBarContext, type TabBarControl } from "../../components/TabBarContext";
+import { useAccount } from "../../hooks/useAccount";
 import { stampSignedIn } from "@/lib/accountFlag";
 
 /**
@@ -14,20 +14,20 @@ import { stampSignedIn } from "@/lib/accountFlag";
  * A route group rather than three independent pages, so `PhoneFrame` is
  * mounted once and switching tabs does not tear down and rebuild the frame.
  *
- * `/t/[code]` lives inside this group too, so the shell — frame and tab bar —
+ * `/app/t/[code]` lives inside this group too, so the shell — frame and tab bar —
  * stays mounted while you're in a trip; the page itself stands the bar down
  * for the map and for glance mode, the two views that own the whole viewport.
- * `/join` and `/trips/[tripId]` remain outside it: a join-by-code form and a
- * past-trip leaf, neither of which is one of the four sections.
+ * `/join` and `/app/trips/[tripId]` remain outside it: a join-by-code form and
+ * a past-trip leaf, neither of which is one of the four sections.
  */
 
 const TAB_FOR_PATH = (pathname: string): TabKey | null => {
   // A trip is not one of the four sections. Highlighting Home while you are
   // looking at a trip would claim you are somewhere you are not.
-  if (pathname.startsWith("/t/")) return null;
-  if (pathname.startsWith("/trips")) return "trips";
-  if (pathname.startsWith("/repairs")) return "repairs";
-  if (pathname.startsWith("/you")) return "you";
+  if (pathname.startsWith("/app/t/")) return null;
+  if (pathname.startsWith("/app/trips")) return "trips";
+  if (pathname.startsWith("/app/repairs")) return "repairs";
+  if (pathname.startsWith("/app/you")) return "you";
   return "home";
 };
 

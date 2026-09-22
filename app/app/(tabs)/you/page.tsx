@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { YouScreen } from "../../components/Account";
-import { useAccount } from "../../hooks/useAccount";
+import { YouScreen } from "../../../components/Account";
+import { useAccount } from "../../../hooks/useAccount";
 import { account as accountClient, history } from "@/lib/data";
 import { hapticsSupported } from "@/lib/haptics";
 import { applyPreferences, readLocalPreferences, writeLocalPreference } from "@/lib/preferences";
@@ -32,7 +32,7 @@ export default function YouPage() {
   // Signed out with no account to show, this screen has nothing to be. Home is
   // where sign-in lives.
   useEffect(() => {
-    if (account.state === "signedOut") router.replace("/");
+    if (account.state === "signedOut") router.replace("/app");
   }, [account.state, router]);
 
   const rename = async (displayName: string) => {
@@ -86,7 +86,7 @@ export default function YouPage() {
       }
       onSignOut={() => {
         void account.signOut();
-        router.push("/");
+        router.push("/app");
       }}
     />
   );

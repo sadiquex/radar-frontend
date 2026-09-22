@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PhoneFrame } from "../../components/PhoneFrame";
-import { TripDetail } from "../../components/Account";
-import { C, FONT } from "../../components/Radar";
-import { useAccount } from "../../hooks/useAccount";
+import { PhoneFrame } from "../../../components/PhoneFrame";
+import { TripDetail } from "../../../components/Account";
+import { C, FONT } from "../../../components/Radar";
+import { useAccount } from "../../../hooks/useAccount";
 import { history } from "@/lib/data";
 import type { TripEntry } from "@/lib/data/history";
 
@@ -32,7 +32,7 @@ export default function TripDetailPage() {
 
   useEffect(() => {
     if (account.state === "signedOut") {
-      router.replace("/");
+      router.replace("/app");
       return;
     }
     if (!signedIn || tripId === "") return;
@@ -43,7 +43,7 @@ export default function TripDetailPage() {
       // A live trip belongs on the group screen, which is the thing you
       // actually want when you tap a trip that is still running.
       if (found?.kind === "live") {
-        router.replace(`/t/${found.shareCode}`);
+        router.replace(`/app/t/${found.shareCode}`);
         return;
       }
       setTrip(found);
@@ -60,7 +60,7 @@ export default function TripDetailPage() {
     setError(null);
     try {
       await history.forget(tripId);
-      router.replace("/trips");
+      router.replace("/app/trips");
     } catch {
       setError("Couldn't remove that trip. Try again.");
       setBusy(false);
@@ -93,7 +93,7 @@ export default function TripDetailPage() {
               This trip is not one of yours, or you have already removed it.
             </p>
             <button
-              onClick={() => router.replace("/trips")}
+              onClick={() => router.replace("/app/trips")}
               style={{ fontFamily: FONT.body, fontSize: 15, color: C.text, minHeight: 44, marginTop: 12 }}
             >
               Back to your trips

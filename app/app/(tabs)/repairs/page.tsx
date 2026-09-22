@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Atlas, AddPoint, PointSheet, type DraftPoint } from "../../components/Repairs";
-import { useHideTabBar } from "../../components/TabBarContext";
+import { Atlas, AddPoint, PointSheet, type DraftPoint } from "../../../components/Repairs";
+import { useHideTabBar } from "../../../components/TabBarContext";
 import { rank, verdictFor } from "@/lib/repairs/atlas";
 import { DEMO_POINTS, DEMO_POSITION } from "@/lib/repairs/fixtures";
 import type { RepairCategory, RepairPoint } from "@/lib/repairs/types";

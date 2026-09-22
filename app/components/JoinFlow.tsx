@@ -61,7 +61,7 @@ export function JoinFlow({ initialCode }: { initialCode?: string }) {
       await data.joinTrip(target.id, await getIdentity(), name);
       // Deliberately staying busy across the navigation, so the button cannot
       // be pressed a second time while the group screen mounts.
-      router.push(`/t/${target.shareCode}`);
+      router.push(`/app/t/${target.shareCode}`);
     } catch (err) {
       const outcome = joinOutcome(err);
       if (outcome.kind === "switch") {
@@ -104,7 +104,7 @@ export function JoinFlow({ initialCode }: { initialCode?: string }) {
             This link is invalid or the trip has ended.
           </div>
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/app")}
             className="mt-4 px-6 rounded-2xl"
             style={{ background: C.text, color: C.ground, fontFamily: FONT.body, fontWeight: 600, minHeight: 52 }}
           >
@@ -121,7 +121,7 @@ export function JoinFlow({ initialCode }: { initialCode?: string }) {
         alphabet={SHARE_CODE_ALPHABET}
         prefilledCode={trip?.shareCode ?? ""}
         tripName={trip?.name}
-        onBack={() => router.push("/")}
+        onBack={() => router.push("/app")}
         onJoin={(input) => void handleJoin(input)}
         busy={busy}
         error={error ?? account.error}
