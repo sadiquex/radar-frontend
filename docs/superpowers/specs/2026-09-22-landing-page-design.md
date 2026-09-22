@@ -303,7 +303,9 @@ Everything is transform/opacity only, and the global `prefers-reduced-motion` bl
 
 - The sweep is the existing `.gt-sweep` (5s linear, compositor-only).
 - Hero contacts arrive on a stagger.
-- **No scroll-triggered section entrances.** Reusing `.gt-rise` on an `IntersectionObserver` would make the entire static half of the page a client component in order to fade in headings. The motion budget is spent on the two things that carry meaning — the sweep and the running verdict — and `Sections.tsx` stays a server component.
+- **No scroll-triggered section entrances.** The motion budget is spent on the two things that carry meaning — the sweep and the running verdict — and headings fading in as you scroll is decoration this page does not need.
+
+  *Correction, found during implementation:* the original reason given here was that an `IntersectionObserver` would force the static half of the page to become a client component. That reason is void — `Sections.tsx` is a client component regardless, because it consumes `C`/`FONT`/`STATUS` from `Radar.tsx`, which carries `"use client"`, and the build fails without the directive. The decision stands on the motion-budget argument alone; the cost argument was wrong and is recorded here rather than quietly dropped.
 - **The convoy pauses when off-screen.** A `setInterval` ticking a demo nobody is looking at is a battery cost on a phone, and this page is mostly read on phones.
 - **Under reduced motion the convoy freezes on a representative frame** rather than inheriting the global 0.001ms override, which would otherwise flicker the whole script past in an instant. This is an explicit `matchMedia` check, not a CSS consequence.
 - Nothing scroll-scrubbed, nothing parallax, no scroll hijacking.
