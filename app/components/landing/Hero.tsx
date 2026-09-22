@@ -56,7 +56,12 @@ export function Hero() {
       <div className="mx-auto w-full max-w-[1200px] px-6">
         <nav className="flex items-center justify-between" style={{ paddingTop: 28 }}>
           <span className="flex items-center gap-2">
-            <Mark size={20} />
+            {/* Mark carries role="img" aria-label={PRODUCT_NAME}; without
+                aria-hidden here, assistive tech announces the name twice
+                back to back with the literal text node right after it. */}
+            <span aria-hidden="true">
+              <Mark size={20} />
+            </span>
             <span style={{ fontFamily: FONT.display, fontWeight: 600, fontSize: 17, letterSpacing: "-0.02em" }}>
               {PRODUCT_NAME}
             </span>
@@ -70,7 +75,7 @@ export function Hero() {
           </Link>
         </nav>
 
-        <div className="grid items-center gap-12 md:grid-cols-[1.1fr_0.9fr]" style={{ padding: "clamp(48px, 9vh, 104px) 0" }}>
+        <div className="grid items-center gap-12 min-[900px]:grid-cols-[1.1fr_0.9fr]" style={{ padding: "clamp(48px, 9vh, 104px) 0" }}>
           <div>
             <p
               style={{
@@ -84,7 +89,7 @@ export function Hero() {
             <h1
               style={{
                 fontFamily: FONT.display, fontWeight: 500,
-                fontSize: "clamp(2.75rem, 7vw, 6rem)", lineHeight: 0.98,
+                fontSize: "clamp(2.75rem, 6vw, 4.5rem)", lineHeight: 0.98,
                 letterSpacing: "-0.04em", marginTop: 20,
               }}
             >
