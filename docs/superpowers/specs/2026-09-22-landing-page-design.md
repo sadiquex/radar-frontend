@@ -160,7 +160,7 @@ Full height, `.gt-night` (§7.1).
   > *Without the calls.*   ← second line in `muted`
 - **Sub** — "For groups moving together — a cycling group, a convoy, a hiking party. Join from a link in seconds, with nothing to install. Every trip expires in 8 hours."
 - **CTAs** — primary per §4.3 → `/app`; secondary "Join with a code" → `/join`.
-- **Micro-line** — "No install. No account needed. Works in any browser."
+- **Micro-line** — "Nothing to install. An account is optional." **Not** "no account needed": accounts exist, `signInAvailable` is true whenever the API and a Google client id are configured, and claiming otherwise misrepresents the product. §3a below carries the full story.
 - **The scope** — `LiveScope` at ~420px, sweeping, contacts arriving on the ring one at a time over the first few seconds. The page performs its own join sequence.
 - **Closing line**, set large, on the hairline that ends the act:
   > A map full of pins answers nothing.
@@ -206,9 +206,21 @@ Closing note: "Status is carried by a glyph, never by colour alone — so it sur
 
 - Kicker: "There is no position-history table to keep them in. Coordinates are overwritten in place, never appended."
 
+**§3a Optional accounts.** The page cannot claim "no account needed" and also be true: Google sign-in exists. It is genuinely optional, and saying so properly *strengthens* the privacy argument rather than weakening it.
+
+- Eyebrow `OPTIONAL ACCOUNTS`
+- H2 "Signed in or not, it works the same."
+- Body: "Radar needs no account. Starting a trip, joining one, the verdict, the map — all of it works with nobody signed in."
+- What it buys: "Signing in with Google adds three things — a history of the trips you took, a name that follows you instead of being typed into every trip, and settings that follow you between devices."
+- The kicker, which is the point: "It takes two fields from Google: an account identifier and a display name. Not your email. Not your picture. There is no email column in the database to put one in."
+
+Verified against the code, not the docs: `lib/data/account.ts`'s `AccountProfile` is `{ displayName: string }` and nothing else; the `users` table is keyed on `google_sub` with a display name and has **no email column**; `signInAvailable = BACKEND === "http" && googleClientId.length > 0`.
+
+Sign-in is described, **not** offered as a call to action — the same posture the in-app landing screen takes, where it sits below the two things people came to do. That also keeps the page honest if the OAuth app is still in Testing mode (PROJECT-OVERVIEW §14 open item 2), where an outside visitor pressing a sign-in button would meet "Access blocked".
+
 **§4 How it works.** Three steps.
 
-1. **Start a trip** — "Name it if you like, and drop a pin where you're headed. Both optional."
+1. **Start a trip** — "Name it if you like, and set where you're headed — search for the place, or drop a pin on the map. Both optional." Destination search shipped (`app/components/DestinationSearch.tsx`, `GET /v1/geocode` proxying Photon); "drop a pin" alone understates it.
 2. **Share the code** — "Six characters, a link, or a QR code. No `0`/`O` or `1`/`I`, so nobody mishears it." Shown on a real share-code card.
 3. **Ride** — "Everyone sees the same one-line verdict. Nobody installs anything."
 
@@ -216,7 +228,7 @@ Closing note: "Status is carried by a glyph, never by colour alone — so it sur
 
 - *Light by default* — "A dark screen loses to reflected sunlight, so the light theme is the tuned one."
 - *Signage type* — "Archivo and Signika, drawn for wayfinding rather than for web apps. They hold at 13px in glare."
-- *The screen stays awake* — "Geolocation stops being delivered when the screen sleeps, which is exactly when the group needs it."
+- *The screen stays awake* — "Geolocation stops being delivered when the screen sleeps, which is exactly when the group needs it. Radar holds the screen on for the length of a trip, wherever the browser allows it." The trailing caveat is load-bearing: the app itself only claims this when `'wakeLock' in navigator`, and the landing page must not claim more than the product does.
 - *Writes speed up as you do* — "Every 20 seconds at rest, every 5 at 30 km/h. A cyclist covers 30 m in under four seconds."
 
 **§6 Close.** "Start a trip." · "It takes about ten seconds, and it expires by itself." · the same two CTAs.

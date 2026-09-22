@@ -806,8 +806,12 @@ export function Hero() {
               </Link>
             </div>
 
+            {/* Not "no account needed". Google sign-in exists and `signInAvailable`
+                is true whenever the API and a client id are configured; claiming
+                otherwise misrepresents the product. The accounts section in
+                Sections.tsx carries the full story. */}
             <p style={{ fontFamily: FONT.body, fontSize: 13, color: C.faint, marginTop: 18 }}>
-              No install. No account needed. Works in any browser.
+              Nothing to install. An account is optional.
             </p>
           </div>
 
@@ -1239,9 +1243,9 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 **Interfaces:**
 - Consumes: `C`, `FONT`, `STATUS`, `Glyph`, `Mark` from `../Radar`; `PRODUCT_NAME` from `@/lib/brand`; `StatusKey` from `@/lib/types`
-- Produces: `<Statuses />`, `<Forgets />`, `<HowItWorks />`, `<Craft />`, `<Close />`, `<SiteFooter />`
+- Produces: `<Statuses />`, `<Forgets />`, `<Accounts />`, `<HowItWorks />`, `<Craft />`, `<Close />`, `<SiteFooter />`
 
-All six are static presentation with no state between them, so they share one file. There is nothing to split until something needs to change independently.
+All seven are static presentation with no state between them, so they share one file. There is nothing to split until something needs to change independently.
 
 - [ ] **Step 1: Write the sections**
 
@@ -1440,9 +1444,82 @@ export const Forgets = () => (
   </Shell>
 );
 
+// ─── §3a Optional accounts ──────────────────────────────────────────────────
+// The page cannot say "no account needed" and be true: Google sign-in exists.
+// Saying so properly strengthens the privacy argument instead of weakening it —
+// an optional account that stores no email is a better story than silence.
+//
+// Every claim here is checked against the code, not the docs:
+//   `AccountProfile` in lib/data/account.ts is `{ displayName: string }`;
+//   the `users` table is keyed on google_sub + display name with NO email column;
+//   signInAvailable = BACKEND === "http" && googleClientId.length > 0.
+//
+// Sign-in is DESCRIBED, never offered as a call to action — the same posture the
+// in-app landing screen takes, where it sits below the two things people came to
+// do. That also keeps this honest while the OAuth app is in Testing mode.
+const ACCOUNT_GIVES = [
+  "A history of the trips you took.",
+  "A name that follows you, instead of being typed into every trip.",
+  "Settings that follow you between devices.",
+];
+
+export const Accounts = () => (
+  <Shell>
+    <div className="grid gap-12 md:grid-cols-[0.95fr_1.05fr] md:items-start">
+      <div>
+        <Eyebrow>Optional accounts</Eyebrow>
+        <H2>Signed in or not, it works the same.</H2>
+        <Body>
+          Radar needs no account. Starting a trip, joining one, the verdict, the map — all of it
+          works with nobody signed in.
+        </Body>
+      </div>
+
+      <div>
+        <p
+          style={{
+            fontFamily: FONT.mono, fontSize: 12, fontWeight: 500, letterSpacing: "0.12em",
+            textTransform: "uppercase", color: C.muted,
+          }}
+        >
+          What signing in with Google adds
+        </p>
+        <div style={{ marginTop: 14 }}>
+          {ACCOUNT_GIVES.map((line) => (
+            <p
+              key={line}
+              style={{
+                fontFamily: FONT.body, fontSize: 16, lineHeight: 1.5,
+                padding: "12px 0", borderTop: `1px solid ${C.line}`,
+              }}
+            >
+              {line}
+            </p>
+          ))}
+        </div>
+        <p
+          style={{
+            fontFamily: FONT.display, fontSize: "clamp(1.0625rem, 1.5vw, 1.375rem)",
+            lineHeight: 1.4, letterSpacing: "-0.02em", marginTop: 26,
+            borderTop: `1px solid ${C.lineStrong}`, paddingTop: 22,
+          }}
+        >
+          It takes two fields from Google: an account identifier and a display name.{" "}
+          <span style={{ color: C.muted }}>
+            Not your email. Not your picture. There is no email column in the database to put one
+            in.
+          </span>
+        </p>
+      </div>
+    </div>
+  </Shell>
+);
+
 // ─── §4 How it works ────────────────────────────────────────────────────────
 const STEPS = [
-  { n: "01", title: "Start a trip", body: "Name it if you like, and drop a pin where you're headed. Both optional." },
+  // Destination search shipped (DestinationSearch.tsx, GET /v1/geocode proxying
+  // Photon), so "drop a pin" alone understates what Create actually does.
+  { n: "01", title: "Start a trip", body: "Name it if you like, and set where you're headed — search for the place, or drop a pin on the map. Both optional." },
   { n: "02", title: "Share the code", body: "Six characters, a link, or a QR code. No 0 or O, no 1 or I, so nobody mishears it." },
   { n: "03", title: "Ride", body: "Everyone sees the same one-line verdict. Nobody installs anything." },
 ];
@@ -1477,7 +1554,9 @@ export const HowItWorks = () => (
 const CRAFT = [
   { title: "Light by default", body: "A dark screen loses to reflected sunlight, so the light theme is the tuned one. Dark is there for night." },
   { title: "Signage type", body: "Archivo and Signika, drawn for wayfinding rather than for web apps. They hold at 13px in glare." },
-  { title: "The screen stays awake", body: "Geolocation stops being delivered when the screen sleeps, which is exactly when the group needs it." },
+  // The trailing caveat is load-bearing: the app only claims a wake lock when
+  // `"wakeLock" in navigator`, so the landing page must not claim more.
+  { title: "The screen stays awake", body: "Geolocation stops being delivered when the screen sleeps, which is exactly when the group needs it. Radar holds the screen on for the length of a trip, wherever the browser allows it." },
   { title: "Writes speed up as you do", body: "Every 20 seconds at rest, every 5 at 30 km/h. A cyclist covers 30 metres in under four seconds." },
 ];
 
@@ -1570,7 +1649,7 @@ export const SiteFooter = () => (
 ```tsx
 import { Hero } from "./components/landing/Hero";
 import { VerdictDemo } from "./components/landing/VerdictDemo";
-import { Statuses, Forgets, HowItWorks, Craft, Close, SiteFooter } from "./components/landing/Sections";
+import { Statuses, Forgets, Accounts, HowItWorks, Craft, Close, SiteFooter } from "./components/landing/Sections";
 
 export default function LandingPage() {
   return (
@@ -1580,6 +1659,7 @@ export default function LandingPage() {
         <VerdictDemo />
         <Statuses />
         <Forgets />
+        <Accounts />
         <HowItWorks />
         <Craft />
         <Close />
