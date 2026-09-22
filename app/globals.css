@@ -14,6 +14,14 @@
    `faint` is NOT a text colour in either theme (§5.2): it clears the 3:1 that
    non-text UI needs and nothing more. Labels use `muted`.
    ------------------------------------------------------------------------- */
+/* Pinned for the landing page's Act II and its footer, which must render on
+   the light palette no matter the visitor's OS theme or an explicit dark
+   choice: the page's whole argument is the crossing from the dark hero into
+   daylight, and that crossing cannot depend on a setting outside the page.
+   Sharing this block with a second selector, rather than copying its values,
+   is exactly how the explicit dark selector further down stays in sync with
+   its own theme block — one value set, so nothing can drift apart. */
+.gt-day,
 :root {
   color-scheme: light;
   --c-ground: #F5F3EE;
@@ -94,6 +102,17 @@
   }
 }
 
+/* The night ground, for a section that must stay dark inside a light page —
+   the landing hero. A second selector rather than a copy: two copies of thirty
+   values drift, and `tokens.test.ts` only contrast-tests one of them. Custom
+   properties resolve from the nearest declaring ancestor, so a `.gt-night`
+   section beats :root in either theme, and in dark mode it declares identical
+   values and changes nothing.
+
+   `.gt-night` is written first so that the explicit dark selector still
+   appears verbatim, immediately followed by its opening brace, where
+   tokens.test.ts looks for it. */
+.gt-night,
 :root[data-theme="dark"] {
   color-scheme: dark;
   --c-ground: #0E1116;
@@ -238,6 +257,17 @@ html, body {
 [data-signed-in="1"] .gt-tabbar {
   display: flex;
 }
+
+/* The landing's primary call to action reads "Start a trip" for a stranger and
+   "Open Radar" for somebody whose browser has been signed in. Both labels are
+   in the markup and CSS chooses, for the same reason `.gt-tabbar` does it this
+   way: deciding in React means the server renders one label and the client
+   renders another on its first pass, and React responds to that mismatch by
+   discarding the whole server document — which throws away whatever
+   THEME_BOOTSTRAP had just set. See lib/accountFlag.ts. */
+.gt-cta-returning { display: none; }
+[data-signed-in="1"] .gt-cta-new { display: none; }
+[data-signed-in="1"] .gt-cta-returning { display: inline; }
 
 .tnum {
   font-variant-numeric: tabular-nums;

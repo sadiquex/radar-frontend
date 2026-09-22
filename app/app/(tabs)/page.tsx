@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Landing, Create, Share } from "../components/Radar";
-import { HomeDashboard } from "../components/Account";
-import { GoogleSignInButton } from "../components/GoogleSignInButton";
-import { useAccount } from "../hooks/useAccount";
-import { useHistory, useLiveTrips } from "../hooks/useHistory";
-import { useHideTabBar } from "../components/TabBarContext";
+import { Landing, Create, Share } from "../../components/Radar";
+import { HomeDashboard } from "../../components/Account";
+import { GoogleSignInButton } from "../../components/GoogleSignInButton";
+import { useAccount } from "../../hooks/useAccount";
+import { useHistory, useLiveTrips } from "../../hooks/useHistory";
+import { useHideTabBar } from "../../components/TabBarContext";
 import { data, getIdentity } from "@/lib/data";
 import type { Trip } from "@/lib/types";
 
@@ -106,9 +106,9 @@ export default function Home() {
           now={Date.now()}
           onStart={() => setStep("create")}
           onJoin={() => router.push("/join")}
-          onOpenLive={(shareCode) => router.push(`/t/${shareCode}`)}
-          onOpenTrip={(tripId) => router.push(`/trips/${tripId}`)}
-          onSeeAll={() => router.push("/trips")}
+          onOpenLive={(shareCode) => router.push(`/app/t/${shareCode}`)}
+          onOpenTrip={(tripId) => router.push(`/app/trips/${tripId}`)}
+          onSeeAll={() => router.push("/app/trips")}
         />
       )}
 
@@ -147,7 +147,7 @@ export default function Home() {
           shareUrl={shareUrl}
           memberCount={memberCount}
           onBack={() => setStep("create")}
-          onOpen={() => router.push(`/t/${trip.shareCode}`)}
+          onOpen={() => router.push(`/app/t/${trip.shareCode}`)}
         />
       )}
     </>

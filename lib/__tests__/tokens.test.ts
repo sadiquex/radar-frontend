@@ -21,11 +21,18 @@ const contrast = (a: string, b: string) => {
   return (hi + 0.05) / (lo + 0.05);
 };
 
-/** Pull one theme's token block out of globals.css. */
+/**
+ * Pull one theme's token block out of globals.css.
+ *
+ * Comments are stripped before searching: a bare `indexOf` can anchor inside
+ * a comment that happens to contain the selector text, which is exactly the
+ * bug this branch already hit once.
+ */
 function tokens(selector: string): Record<string, string> {
-  const at = css.indexOf(selector);
+  const stripped = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const at = stripped.indexOf(selector);
   expect(at, `${selector} missing from globals.css`).toBeGreaterThan(-1);
-  const body = css.slice(at, css.indexOf("}", at));
+  const body = stripped.slice(at, stripped.indexOf("}", at));
   const out: Record<string, string> = {};
   for (const [, name, value] of body.matchAll(/--c-([a-z0-9-]+):\s*(#[0-9a-fA-F]{6})/g)) {
     out[name] = value;
@@ -104,6 +111,19 @@ describe("theme declaration hygiene", () => {
     expect(css).toContain('[data-theme="dark"] .maplibregl-canvas');
     expect(css).not.toMatch(/\[data-theme="dark"\]\s+\.maplibregl-map\s*\{[^}]*filter/);
   });
+
+  it("shares one declaration block between the dark theme and the night section", () => {
+    // The landing hero must be dark inside a light page, and :root[data-theme]
+    // matches only <html>. A second block repeating thirty values would drift,
+    // and only one of the two copies is contrast-tested above. `.gt-night` is
+    // written on the line ABOVE the selector so the literal string the parser
+    // searches for is still present verbatim.
+    expect(css).toMatch(/\.gt-night,\n:root\[data-theme="dark"\] \{/);
+  });
+
+  it("shares one declaration block between the light theme and the day section", () => {
+    expect(css).toMatch(/\.gt-day,\n:root \{/);
+  });
 });
 
 // ─── Type scale ─────────────────────────────────────────────────────────────
@@ -161,7 +181,26 @@ describe("type scale floor", () => {
   // unguarded, and the <input> rule below only ever looked at Radar.tsx while
   // the one text input somebody would actually get wrong lived elsewhere.
   const componentsDir = join(root, "app", "components");
-  const SCREENS = readdirSync(componentsDir).filter((f) => f.endsWith(".tsx"));
+
+  /**
+   * Every component, at any depth. Non-recursive `readdirSync` was the same
+   * bug as the hand-written list it replaced, one level up: `landing/` sits in
+   * a subdirectory and would have been silently unguarded, which is exactly
+   * how the 9px horizon labels survived the first time.
+   *
+   * Paths are returned relative to `componentsDir`, so `join(componentsDir, f)`
+   * below and the `%s` test titles keep working unchanged.
+   */
+  const tsxUnder = (dir: string, prefix = ""): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory()
+        ? tsxUnder(join(dir, e.name), `${prefix}${e.name}/`)
+        : e.name.endsWith(".tsx")
+        ? [`${prefix}${e.name}`]
+        : []
+    );
+
+  const SCREENS = tsxUnder(componentsDir);
 
   it("finds the screen components", () => {
     // A glob that matches nothing passes every assertion under it.

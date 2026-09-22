@@ -160,7 +160,7 @@ Full height, `.gt-night` (§7.1).
   > *Without the calls.*   ← second line in `muted`
 - **Sub** — "For groups moving together — a cycling group, a convoy, a hiking party. Join from a link in seconds, with nothing to install. Every trip expires in 8 hours."
 - **CTAs** — primary per §4.3 → `/app`; secondary "Join with a code" → `/join`.
-- **Micro-line** — "No install. No account needed. Works in any browser."
+- **Micro-line** — "Nothing to install. An account is optional." **Not** "no account needed": accounts exist, `signInAvailable` is true whenever the API and a Google client id are configured, and claiming otherwise misrepresents the product. §3a below carries the full story.
 - **The scope** — `LiveScope` at ~420px, sweeping, contacts arriving on the ring one at a time over the first few seconds. The page performs its own join sequence.
 - **Closing line**, set large, on the hairline that ends the act:
   > A map full of pins answers nothing.
@@ -173,7 +173,7 @@ The crossing to cream is a clean cut on a 1px `--c-arrived` rule — a horizon l
 
 - Eyebrow `THE WHOLE GROUP, IN ONE LINE`
 - H2 "A map shows you dots. Radar tells you what they mean."
-- Body: "Everyone's position reduced to one sentence and one number, because a rider at effort reads one field, not eight. This is the engine running, not a recording."
+- Body: "Everyone's position reduced to one sentence and one number, because a rider at effort reads one field, not eight. This is the engine running, not a recording — four riders on the road to Akosombo: one falls back and catches up, then another reaches the destination." The two clauses name two different riders on purpose. Ama is the only rider who falls behind and rejoins, Kofi the only one who arrives, and he always arrives alone; a single parallel list ("falling back, catching up, and arriving") would describe one rider doing all three, which no tick in the script produces.
 - The card: verdict block at marketing scale (eyebrow · headline · metric + metric label), the horizon strip beneath it (`START ──●──●────● AKOSOMBO`), then four roster rows — avatar, name, glyph, status word, distance. No "You" row; the viewer is watching the group, not in it (§5.2).
 
 **§2 The five statuses.** Read from `STATUS[]` so the labels and colours cannot drift from the app.
@@ -191,7 +191,7 @@ Closing note: "Status is carried by a glyph, never by colour alone — so it sur
 **§3 Then it forgets.** The privacy beat and the loudest typographic moment on the page.
 
 - H2 "Then it forgets."
-- Body: "Eight hours after a trip starts, every coordinate is deleted. Not archived. Not anonymised. Deleted."
+- Body: "Eight hours after a trip starts, every rider's coordinates are deleted. Not archived. Not anonymised. Deleted."
 - A receipt of what a finished trip leaves behind — and only if somebody in it was signed in and therefore asked for one:
 
   ```
@@ -206,9 +206,21 @@ Closing note: "Status is carried by a glyph, never by colour alone — so it sur
 
 - Kicker: "There is no position-history table to keep them in. Coordinates are overwritten in place, never appended."
 
+**§3a Optional accounts.** The page cannot claim "no account needed" and also be true: Google sign-in exists. It is genuinely optional, and saying so properly *strengthens* the privacy argument rather than weakening it.
+
+- Eyebrow `OPTIONAL ACCOUNTS`
+- H2 "Signed in or not, it works the same."
+- Body: "Radar needs no account. Starting a trip, joining one, the verdict, the map — all of it works with nobody signed in."
+- What it buys: "Signing in with Google adds three things — a history of the trips you took, a name that follows you instead of being typed into every trip, and settings that follow you between devices."
+- The kicker, which is the point: "It takes two fields from Google: an account identifier and a display name. Not your email. Not your picture. There is no email column on the users table to put one in."
+
+Verified against the code, not the docs: `lib/data/account.ts`'s `AccountProfile` is `{ displayName: string }` and nothing else; the `users` table is keyed on `google_sub` with a display name and has **no email column**; `signInAvailable = BACKEND === "http" && googleClientId.length > 0`.
+
+Sign-in is described, **not** offered as a call to action — the same posture the in-app landing screen takes, where it sits below the two things people came to do. That also keeps the page honest if the OAuth app is still in Testing mode (PROJECT-OVERVIEW §14 open item 2), where an outside visitor pressing a sign-in button would meet "Access blocked".
+
 **§4 How it works.** Three steps.
 
-1. **Start a trip** — "Name it if you like, and drop a pin where you're headed. Both optional."
+1. **Start a trip** — "Name it if you like, and set where you're headed — search for the place, or drop a pin on the map. Both optional." Destination search shipped (`app/components/DestinationSearch.tsx`, `GET /v1/geocode` proxying Photon); "drop a pin" alone understates it.
 2. **Share the code** — "Six characters, a link, or a QR code. No `0`/`O` or `1`/`I`, so nobody mishears it." Shown on a real share-code card.
 3. **Ride** — "Everyone sees the same one-line verdict. Nobody installs anything."
 
@@ -216,12 +228,25 @@ Closing note: "Status is carried by a glyph, never by colour alone — so it sur
 
 - *Light by default* — "A dark screen loses to reflected sunlight, so the light theme is the tuned one."
 - *Signage type* — "Archivo and Signika, drawn for wayfinding rather than for web apps. They hold at 13px in glare."
-- *The screen stays awake* — "Geolocation stops being delivered when the screen sleeps, which is exactly when the group needs it."
+- *The screen stays awake* — "Geolocation stops being delivered when the screen sleeps, which is exactly when the group needs it. Radar holds the screen on for the length of a trip, wherever the browser allows it." The trailing caveat is load-bearing: the app itself only claims this when `'wakeLock' in navigator`, and the landing page must not claim more than the product does.
 - *Writes speed up as you do* — "Every 20 seconds at rest, every 5 at 30 km/h. A cyclist covers 30 m in under four seconds."
 
 **§6 Close.** "Start a trip." · "It takes about ten seconds, and it expires by itself." · the same two CTAs.
 
 **Footer.** `Mark` + Radar, the one-line description, links to `/app` and `/join`. No legal links (§3).
+
+### 6.0 Photography
+
+Two full-bleed photographic bands, added after the first build because the page read as a wall of type. Both are Pexels stock, licensed for commercial use; provenance is in `public/IMAGE-CREDITS.md`.
+
+- **The crossing** (`band-road.jpg`), between the night hero and the daylight body. Riders and boda-bodas strung out unevenly down a red laterite road — which is the situation the verdict engine exists to read, so the image argues rather than decorates. West African, matching the product's actual audience and the Akosombo and Osu already in its copy.
+- **Arrival** (`band-arrival.jpg`), above the closing call to action.
+
+**A third band was designed and dropped.** It would have sat beside §5 and shown a phone on a handlebar in harsh sun, *demonstrating* the sunlight-legibility argument instead of asserting it. No stock photograph does that: every candidate had no screen visible, a loud mount fighting the palette, or a phone home screen, which is wrong for a web app. On a page whose thesis is that its claims are checkable, an image that gestures at a claim without evidencing it is the wrong kind of decoration, so §5 keeps making the argument in words. Worth revisiting if a real photograph is ever taken.
+
+**Treatment.** `saturate(0.5) contrast(1.06)`, plus a fade into the ground at both edges. The fades are the load-bearing part: the crossing band spans two different grounds, dissolving into `#0E1116` above and `#F5F3EE` below. Neither hex is written — `C` holds `var()` references and cannot express a colour value — so each fade instead carries the class that makes `--c-ground` resolve to the ground it needs (`.gt-night` above, `.gt-day` below). The tokens stay the only definition of both.
+
+`PhotoBand` takes a token *name* (`topSurface="sunken"`), not a token value, because `app/page.tsx` exports `metadata` and is therefore a server component that cannot read `C` out of the client-only `Radar.tsx` at all.
 
 ### 6.1 Files
 
@@ -233,6 +258,9 @@ app/components/landing/Sections.tsx     act II §2–§6 + footer (presentationa
 lib/landing/convoy.ts                   the script
 lib/landing/__tests__/convoy.test.ts
 public/og.jpg                           copied from brag-output/brag.jpg
+public/band-road.jpg                    the crossing (1800px, q55)
+public/band-arrival.jpg                 arrival (1800px, q55)
+public/IMAGE-CREDITS.md                 provenance for both
 ```
 
 Three components, not nine. §2–§6 are static presentation with no state between them and splitting them buys nothing today.
@@ -291,7 +319,9 @@ Everything is transform/opacity only, and the global `prefers-reduced-motion` bl
 
 - The sweep is the existing `.gt-sweep` (5s linear, compositor-only).
 - Hero contacts arrive on a stagger.
-- **No scroll-triggered section entrances.** Reusing `.gt-rise` on an `IntersectionObserver` would make the entire static half of the page a client component in order to fade in headings. The motion budget is spent on the two things that carry meaning — the sweep and the running verdict — and `Sections.tsx` stays a server component.
+- **No scroll-triggered section entrances.** The motion budget is spent on the two things that carry meaning — the sweep and the running verdict — and headings fading in as you scroll is decoration this page does not need.
+
+  *Correction, found during implementation:* the original reason given here was that an `IntersectionObserver` would force the static half of the page to become a client component. That reason is void — `Sections.tsx` is a client component regardless, because it consumes `C`/`FONT`/`STATUS` from `Radar.tsx`, which carries `"use client"`, and the build fails without the directive. The decision stands on the motion-budget argument alone; the cost argument was wrong and is recorded here rather than quietly dropped.
 - **The convoy pauses when off-screen.** A `setInterval` ticking a demo nobody is looking at is a battery cost on a phone, and this page is mostly read on phones.
 - **Under reduced motion the convoy freezes on a representative frame** rather than inheriting the global 0.001ms override, which would otherwise flicker the whole script past in an instant. This is an explicit `matchMedia` check, not a CSS consequence.
 - Nothing scroll-scrubbed, nothing parallax, no scroll hijacking.

@@ -2,7 +2,7 @@
   "name": "Radar",
   "short_name": "Radar",
   "description": "Temporary location sharing for groups moving together. Join in seconds, no install.",
-  "start_url": "/",
+  "start_url": "/app",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F5F3EE",

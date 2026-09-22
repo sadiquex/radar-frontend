@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { TripsScreen } from "../../components/Account";
-import { useAccount } from "../../hooks/useAccount";
-import { useHistory, useLiveTrips } from "../../hooks/useHistory";
+import { TripsScreen } from "../../../components/Account";
+import { useAccount } from "../../../hooks/useAccount";
+import { useHistory, useLiveTrips } from "../../../hooks/useHistory";
 import { liveOnly } from "@/lib/history";
 
 /**
@@ -27,7 +27,7 @@ export default function TripsPage() {
   // Signed out there is no tab bar, so an empty history here would be a screen
   // with no way off it. Home is where sign-in lives.
   useEffect(() => {
-    if (account.state === "signedOut") router.replace("/");
+    if (account.state === "signedOut") router.replace("/app");
   }, [account.state, router]);
 
   // Prefer the page's own live rows; fall back to the dedicated endpoint so a
@@ -44,10 +44,10 @@ export default function TripsPage() {
       hasMore={hasMore}
       loadingMore={loadingMore}
       now={Date.now()}
-      onOpen={(tripId) => router.push(`/trips/${tripId}`)}
-      onOpenLive={(shareCode) => router.push(`/t/${shareCode}`)}
+      onOpen={(tripId) => router.push(`/app/trips/${tripId}`)}
+      onOpenLive={(shareCode) => router.push(`/app/t/${shareCode}`)}
       onLoadMore={() => void loadMore()}
-      onStart={() => router.push("/")}
+      onStart={() => router.push("/app")}
     />
   );
 }

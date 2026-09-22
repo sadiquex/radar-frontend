@@ -5,12 +5,12 @@ import { useParams, useRouter } from "next/navigation";
 import {
   MemberView, MapView, Ended, Toast, MenuSheet, GlanceView,
   memberFromParticipant, C, FONT, type Member,
-} from "../../../components/Radar";
-import { GroupScreen } from "../../../components/GroupScreen";
-import { useHideTabBar } from "../../../components/TabBarContext";
-import { useAccount } from "../../../hooks/useAccount";
-import { useGeolocation } from "../../../hooks/useGeolocation";
-import { useWakeLock } from "../../../hooks/useWakeLock";
+} from "../../../../components/Radar";
+import { GroupScreen } from "../../../../components/GroupScreen";
+import { useHideTabBar } from "../../../../components/TabBarContext";
+import { useAccount } from "../../../../hooks/useAccount";
+import { useGeolocation } from "../../../../hooks/useGeolocation";
+import { useWakeLock } from "../../../../hooks/useWakeLock";
 import { data, getIdentity, notifications, vapidPublicKey } from "@/lib/data";
 import { enablePush, disablePush, pushSupported, needsHomeScreenInstall } from "@/lib/push";
 import { serverNow } from "@/lib/serverTime";
@@ -305,7 +305,7 @@ export default function GroupPage() {
     return (
       <Ended
         memberCount={participants.length}
-        onRestart={() => router.push("/")}
+        onRestart={() => router.push("/app")}
         // Only claimed to somebody who has an account for it to be saved to.
         saved={account.state === "signedIn"}
       />
@@ -410,7 +410,7 @@ export default function GroupPage() {
     } catch {
       /* nothing the leaver can do about it */
     }
-    router.push("/");
+    router.push("/app");
   };
 
   const end = async () => {
