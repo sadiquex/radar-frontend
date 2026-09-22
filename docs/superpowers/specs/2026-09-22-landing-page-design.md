@@ -173,7 +173,7 @@ The crossing to cream is a clean cut on a 1px `--c-arrived` rule — a horizon l
 
 - Eyebrow `THE WHOLE GROUP, IN ONE LINE`
 - H2 "A map shows you dots. Radar tells you what they mean."
-- Body: "Everyone's position reduced to one sentence and one number, because a rider at effort reads one field, not eight. This is the engine running, not a recording."
+- Body: "Everyone's position reduced to one sentence and one number, because a rider at effort reads one field, not eight. This is the engine running, not a recording — four riders on the road to Akosombo: one falls back and catches up, then another reaches the destination." The two clauses name two different riders on purpose. Ama is the only rider who falls behind and rejoins, Kofi the only one who arrives, and he always arrives alone; a single parallel list ("falling back, catching up, and arriving") would describe one rider doing all three, which no tick in the script produces.
 - The card: verdict block at marketing scale (eyebrow · headline · metric + metric label), the horizon strip beneath it (`START ──●──●────● AKOSOMBO`), then four roster rows — avatar, name, glyph, status word, distance. No "You" row; the viewer is watching the group, not in it (§5.2).
 
 **§2 The five statuses.** Read from `STATUS[]` so the labels and colours cannot drift from the app.

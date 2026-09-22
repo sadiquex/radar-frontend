@@ -1030,8 +1030,8 @@ export function VerdictDemo() {
             >
               Everyone&rsquo;s position reduced to one sentence and one number, because a rider at
               effort reads one field, not eight. This is the engine running, not a recording —
-              four riders on the road to {CONVOY_DESTINATION.name}, with one falling back, catching
-              up, and arriving.
+              four riders on the road to {CONVOY_DESTINATION.name}: one falls back and catches up,
+              then another reaches the destination.
             </p>
           </div>
 
