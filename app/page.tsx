@@ -1,4 +1,5 @@
 import { Hero } from "./components/landing/Hero";
+import { VerdictDemo } from "./components/landing/VerdictDemo";
 
 /**
  * The landing page.
@@ -11,6 +12,7 @@ export default function LandingPage() {
   return (
     <main>
       <Hero />
+      <VerdictDemo />
     </main>
   );
 }
