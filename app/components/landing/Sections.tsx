@@ -133,7 +133,7 @@ export const Forgets = () => (
         <Eyebrow>Eight hours</Eyebrow>
         <H2>Then it forgets.</H2>
         <Body>
-          Eight hours after a trip starts, every coordinate is deleted. Not archived. Not
+          Eight hours after a trip starts, every rider&rsquo;s coordinates are deleted. Not archived. Not
           anonymised. Deleted.
         </Body>
         <p
@@ -217,7 +217,7 @@ const ACCOUNT_GIVES = [
 ];
 
 export const Accounts = () => (
-  <Shell>
+  <Shell tone={C.sunken}>
     <div className="grid gap-12 md:grid-cols-[0.95fr_1.05fr] md:items-start">
       <div>
         <Eyebrow>Optional accounts</Eyebrow>
@@ -259,8 +259,8 @@ export const Accounts = () => (
         >
           It takes two fields from Google: an account identifier and a display name.{" "}
           <span style={{ color: C.muted }}>
-            Not your email. Not your picture. There is no email column in the database to put one
-            in.
+            Not your email. Not your picture. There is no email column on the users table to put
+            one in.
           </span>
         </p>
       </div>
@@ -278,7 +278,7 @@ const STEPS = [
 ];
 
 export const HowItWorks = () => (
-  <Shell tone={C.sunken}>
+  <Shell>
     <Eyebrow>How it works</Eyebrow>
     <H2>Three taps, then nothing to manage.</H2>
 
@@ -314,7 +314,7 @@ const CRAFT = [
 ];
 
 export const Craft = () => (
-  <Shell>
+  <Shell tone={C.sunken}>
     <Eyebrow>Built to be read at speed</Eyebrow>
     <H2>Designed for a phone on a handlebar.</H2>
 
@@ -335,7 +335,7 @@ export const Craft = () => (
 
 // ─── §6 Close ───────────────────────────────────────────────────────────────
 export const Close = () => (
-  <Shell tone={C.sunken}>
+  <Shell>
     <div className="grid place-items-center text-center">
       <H2>Start a trip.</H2>
       <Body>It takes about ten seconds, and it expires by itself.</Body>
@@ -374,7 +374,12 @@ export const SiteFooter = () => (
       style={{ paddingTop: 30, paddingBottom: "calc(30px + var(--safe-b))" }}
     >
       <span className="flex items-center gap-2">
-        <Mark size={18} />
+        {/* Mark carries role="img" aria-label={PRODUCT_NAME}; without
+            aria-hidden here, assistive tech announces the name twice back
+            to back with the literal text node right after it. */}
+        <span aria-hidden="true">
+          <Mark size={18} />
+        </span>
         <span style={{ fontFamily: FONT.display, fontSize: 15, fontWeight: 600, letterSpacing: "-0.02em" }}>
           {PRODUCT_NAME}
         </span>

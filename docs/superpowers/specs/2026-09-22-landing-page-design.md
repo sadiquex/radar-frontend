@@ -191,7 +191,7 @@ Closing note: "Status is carried by a glyph, never by colour alone — so it sur
 **§3 Then it forgets.** The privacy beat and the loudest typographic moment on the page.
 
 - H2 "Then it forgets."
-- Body: "Eight hours after a trip starts, every coordinate is deleted. Not archived. Not anonymised. Deleted."
+- Body: "Eight hours after a trip starts, every rider's coordinates are deleted. Not archived. Not anonymised. Deleted."
 - A receipt of what a finished trip leaves behind — and only if somebody in it was signed in and therefore asked for one:
 
   ```
@@ -212,7 +212,7 @@ Closing note: "Status is carried by a glyph, never by colour alone — so it sur
 - H2 "Signed in or not, it works the same."
 - Body: "Radar needs no account. Starting a trip, joining one, the verdict, the map — all of it works with nobody signed in."
 - What it buys: "Signing in with Google adds three things — a history of the trips you took, a name that follows you instead of being typed into every trip, and settings that follow you between devices."
-- The kicker, which is the point: "It takes two fields from Google: an account identifier and a display name. Not your email. Not your picture. There is no email column in the database to put one in."
+- The kicker, which is the point: "It takes two fields from Google: an account identifier and a display name. Not your email. Not your picture. There is no email column on the users table to put one in."
 
 Verified against the code, not the docs: `lib/data/account.ts`'s `AccountProfile` is `{ displayName: string }` and nothing else; the `users` table is keyed on `google_sub` with a display name and has **no email column**; `signInAvailable = BACKEND === "http" && googleClientId.length > 0`.
 
