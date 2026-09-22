@@ -250,6 +250,17 @@ html, body {
   display: flex;
 }
 
+/* The landing's primary call to action reads "Start a trip" for a stranger and
+   "Open Radar" for somebody whose browser has been signed in. Both labels are
+   in the markup and CSS chooses, for the same reason `.gt-tabbar` does it this
+   way: deciding in React means the server renders one label and the client
+   renders another on its first pass, and React responds to that mismatch by
+   discarding the whole server document — which throws away whatever
+   THEME_BOOTSTRAP had just set. See lib/accountFlag.ts. */
+.gt-cta-returning { display: none; }
+[data-signed-in="1"] .gt-cta-new { display: none; }
+[data-signed-in="1"] .gt-cta-returning { display: inline; }
+
 .tnum {
   font-variant-numeric: tabular-nums;
 }
