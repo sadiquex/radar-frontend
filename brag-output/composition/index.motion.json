@@ -1,0 +1,81 @@
+{
+  "duration": 22.5,
+  "assertions": [
+    {
+      "kind": "appearsBy",
+      "selector": "#s1-headline",
+      "bySec": 1.15
+    },
+    {
+      "kind": "appearsBy",
+      "selector": "#s2-code",
+      "bySec": 4.0
+    },
+    {
+      "kind": "appearsBy",
+      "selector": "#s3-headline",
+      "bySec": 7.4
+    },
+    {
+      "kind": "before",
+      "a": "#s3-eyebrow",
+      "b": "#s3-headline"
+    },
+    {
+      "kind": "before",
+      "a": "#s3-headline",
+      "b": "#s3-caption"
+    },
+    {
+      "kind": "before",
+      "a": "#r-ama",
+      "b": "#r-yaw"
+    },
+    {
+      "kind": "before",
+      "a": "#r-yaw",
+      "b": "#r-kofi"
+    },
+    {
+      "kind": "before",
+      "a": "#r-kofi",
+      "b": "#r-nana"
+    },
+    {
+      "kind": "appearsBy",
+      "selector": "#s4-legend",
+      "bySec": 14.0
+    },
+    {
+      "kind": "appearsBy",
+      "selector": "#s5-headline",
+      "bySec": 16.5
+    },
+    {
+      "kind": "before",
+      "a": "#s5-mono",
+      "b": "#s5-body"
+    },
+    {
+      "kind": "appearsBy",
+      "selector": "#s6-word",
+      "bySec": 20.4
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#s3-headline"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#s6-line"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#r-ama"
+    },
+    {
+      "kind": "staysInFrame",
+      "selector": "#r-nana"
+    }
+  ]
+}

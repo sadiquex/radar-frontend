@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Radar — brag</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <script src="assets/music/audio-data.js"></script>
+    <style>
+      /* ── Type ────────────────────────────────────────────────────────────
+         The three faces the product itself loads (app/layout.tsx): Archivo for
+         display and every numeral, Signika for body, DM Mono for small tracked
+         labels. Shipped locally so the render never waits on a network fetch. */
+      @font-face {
+        font-family: "Archivo";
+        src: url("assets/fonts/archivo-100-900-latin.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Signika";
+        src: url("assets/fonts/signika-300-700-latin.woff2") format("woff2");
+        font-weight: 300 700;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "DM Mono";
+        src: url("assets/fonts/dmmono-400-latin.woff2") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "DM Mono";
+        src: url("assets/fonts/dmmono-500-latin.woff2") format("woff2");
+        font-weight: 500;
+        font-style: normal;
+        font-display: block;
+      }
+
+      /* ── Tokens ───────────────────────────────────────────────────────────
+         Verbatim from app/globals.css. Light is the base and the default: the
+         app is used outdoors, where a dark ground loses to reflected sunlight. */
+      :root {
+        --ground: #f5f3ee;
+        --raised: #ffffff;
+        --line: #cfcac0;
+        --line-strong: #6e6a61;
+        --text: #15171b;
+        --muted: #54595f;
+
+        --arrived: #0b6b3a;
+        --withg: #3e4752;
+        --ahead: #1b4fa8;
+        --behind: #9c4208;
+
+        --d-ground: #0e1116;
+        --d-text: #eceae4;
+        --d-muted: #a8adb6;
+        --d-arrived: #5bd18a;
+        --d-ahead: #7fadff;
+
+        --av-0: #7d5f2a;
+        --av-1: #2e7d6b;
+        --av-2: #7b4b9e;
+        --av-4: #2f5f9e;
+
+        --display: "Archivo", system-ui, sans-serif;
+        --body: "Signika", system-ui, sans-serif;
+        --mono: "DM Mono", ui-monospace, monospace;
+        /* Status glyphs are the accessibility channel, so they must not depend
+           on whichever webfont we happen to be using — same stack as Radar.tsx. */
+        --glyph: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--ground);
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: var(--body);
+        color: var(--text);
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+
+      /* Two untimed full-bleed grounds. The dark one rides in under Scene 5 —
+         the app's real dark theme, not a generic fade to black. */
+      .bg {
+        position: absolute;
+        inset: 0;
+      }
+      #bg-cream {
+        background: var(--ground);
+      }
+      #bg-dark {
+        background: var(--d-ground);
+        opacity: 0;
+      }
+
+      .tnum {
+        font-variant-numeric: tabular-nums;
+      }
+      .eyebrow {
+        font-family: var(--mono);
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      /* ── Scene 1 — A map full of pins ─────────────────────────────────── */
+      .pin {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+      }
+      #s1-copy {
+        position: absolute;
+        left: 360px;
+        top: 528px;
+        width: 1200px;
+        text-align: center;
+      }
+      #s1-headline {
+        font-family: var(--display);
+        font-weight: 500;
+        font-size: 88px;
+        line-height: 1.04;
+        letter-spacing: -0.035em;
+        color: var(--text);
+      }
+      #s1-rule {
+        position: absolute;
+        left: 260px;
+        top: 860px;
+        width: 1400px;
+        height: 2px;
+        transform-origin: left center;
+        background: linear-gradient(90deg, var(--line), var(--muted), var(--arrived));
+      }
+
+      /* ── Scene 2 — Join in seconds ────────────────────────────────────── */
+      #s2-card {
+        position: absolute;
+        left: 570px;
+        top: 258px;
+        width: 780px;
+        background: var(--raised);
+        border: 1.5px solid var(--line-strong);
+        border-radius: 22px;
+        padding: 40px 32px 46px;
+        text-align: center;
+      }
+      #s2-eyebrow-wrap {
+        position: relative;
+        height: 30px;
+      }
+      #s2-eyebrow-wrap .eyebrow {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        font-size: 22px;
+        color: var(--muted);
+      }
+      #s2-code {
+        font-family: var(--display);
+        font-weight: 600;
+        font-size: 128px;
+        line-height: 1;
+        letter-spacing: 0.1em;
+        color: var(--text);
+        margin-top: 22px;
+      }
+      #s2-line {
+        position: absolute;
+        left: 360px;
+        top: 580px;
+        width: 1200px;
+        text-align: center;
+        font-family: var(--body);
+        font-size: 38px;
+        color: var(--muted);
+      }
+      #s2-joined {
+        position: absolute;
+        left: 360px;
+        top: 682px;
+        width: 1200px;
+        text-align: center;
+        font-size: 21px;
+        color: var(--muted);
+      }
+      #s2-avatars {
+        position: absolute;
+        left: 796px;
+        top: 732px;
+        width: 328px;
+        display: flex;
+        gap: 24px;
+      }
+      .av {
+        width: 64px;
+        height: 64px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-family: var(--display);
+        font-weight: 600;
+        font-size: 28px;
+      }
+
+      /* ── Scene 3 — The verdict ────────────────────────────────────────── */
+      #s3-block {
+        position: absolute;
+        left: 200px;
+        top: 296px;
+        width: 1540px;
+      }
+      #s3-eyebrow {
+        font-size: 26px;
+        color: var(--behind);
+      }
+      #s3-headline {
+        font-family: var(--display);
+        font-weight: 500;
+        font-size: 132px;
+        line-height: 1.03;
+        letter-spacing: -0.035em;
+        color: var(--text);
+        margin-top: 18px;
+      }
+      #s3-metric {
+        display: flex;
+        align-items: baseline;
+        gap: 22px;
+        margin-top: 26px;
+      }
+      #s3-metric-num {
+        display: inline-block;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 108px;
+        line-height: 1;
+        color: var(--behind);
+        transform-origin: left bottom;
+      }
+      #s3-metric-label {
+        font-family: var(--mono);
+        font-weight: 400;
+        font-size: 26px;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      #s3-caption {
+        margin-top: 74px;
+        font-family: var(--body);
+        font-size: 34px;
+        color: var(--muted);
+      }
+
+      /* ── Scene 4 — The horizon ────────────────────────────────────────── */
+      #s4-rule {
+        position: absolute;
+        left: 240px;
+        top: 430px;
+        width: 1440px;
+        height: 2px;
+        transform-origin: left center;
+      }
+      #s4-rule-fill {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, var(--line), var(--muted), var(--arrived));
+      }
+      #s4-flag {
+        position: absolute;
+        left: 1652px;
+        top: 403px;
+        width: 56px;
+        height: 56px;
+        border-radius: 999px;
+        background: var(--ground);
+        border: 3px solid var(--arrived);
+        display: grid;
+        place-items: center;
+      }
+      .rider {
+        position: absolute;
+        top: 397px;
+        width: 68px;
+        height: 68px;
+      }
+      .rider .av {
+        width: 68px;
+        height: 68px;
+        font-size: 30px;
+      }
+      .badge {
+        position: absolute;
+        right: -8px;
+        bottom: -6px;
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-family: var(--glyph);
+        font-weight: 600;
+        font-size: 17px;
+        line-height: 1;
+        border: 2px solid var(--ground);
+      }
+      .dist {
+        position: absolute;
+        top: 486px;
+        width: 140px;
+        text-align: center;
+        font-family: var(--display);
+        font-weight: 600;
+        font-size: 26px;
+        color: var(--muted);
+      }
+      .endlabel {
+        position: absolute;
+        top: 556px;
+        font-family: var(--mono);
+        font-weight: 400;
+        font-size: 24px;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      #s4-start {
+        left: 240px;
+      }
+      #s4-dest {
+        left: 1180px;
+        width: 500px;
+        text-align: right;
+      }
+      #s4-legend {
+        position: absolute;
+        left: 200px;
+        top: 682px;
+        width: 1520px;
+        display: flex;
+        justify-content: center;
+        gap: 66px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .legend-glyph {
+        width: 38px;
+        height: 38px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-family: var(--glyph);
+        font-weight: 600;
+        font-size: 20px;
+        line-height: 1;
+      }
+      .legend-label {
+        font-family: var(--body);
+        font-size: 27px;
+        font-weight: 600;
+      }
+
+      /* ── Scene 5 — Then it forgets ────────────────────────────────────── */
+      #s5-block {
+        position: absolute;
+        left: 200px;
+        top: 372px;
+        width: 1520px;
+      }
+      #s5-headline {
+        font-family: var(--display);
+        font-weight: 500;
+        font-size: 120px;
+        line-height: 1.02;
+        letter-spacing: -0.035em;
+        color: var(--d-text);
+      }
+      #s5-mono {
+        margin-top: 54px;
+        font-family: var(--mono);
+        font-weight: 500;
+        font-size: 30px;
+        letter-spacing: 0.1em;
+        color: var(--d-muted);
+      }
+      #s5-body {
+        margin-top: 26px;
+        font-family: var(--body);
+        font-size: 36px;
+        color: var(--d-muted);
+      }
+
+      /* ── Scene 6 — Radar ──────────────────────────────────────────────── */
+      #s6-lockup {
+        position: absolute;
+        left: 360px;
+        top: 402px;
+        width: 1200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 30px;
+      }
+      #s6-word {
+        font-family: var(--display);
+        font-weight: 600;
+        font-size: 96px;
+        letter-spacing: -0.02em;
+        color: var(--d-text);
+        line-height: 1;
+      }
+      #s6-line {
+        position: absolute;
+        left: 360px;
+        top: 580px;
+        width: 1200px;
+        text-align: center;
+        font-family: var(--body);
+        font-size: 40px;
+        color: var(--d-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-width="1920"
+      data-height="1080"
+      data-duration="22.5"
+    >
+      <div id="bg-cream" class="bg"></div>
+      <div id="bg-dark" class="bg"></div>
+
+      <!-- ══ Scene 1 — A map full of pins ══ 0.00 → 3.27 ══════════════════ -->
+      <section id="s1" class="clip" data-start="0" data-duration="3.27" data-track-index="0">
+        <div id="s1-pins">
+          <div class="pin" style="background: var(--av-0)"></div>
+          <div class="pin" style="background: var(--av-1)"></div>
+          <div class="pin" style="background: var(--av-2)"></div>
+          <div class="pin" style="background: var(--av-4)"></div>
+          <div class="pin" style="background: var(--behind)"></div>
+          <div class="pin" style="background: var(--ahead)"></div>
+          <div class="pin" style="background: var(--withg)"></div>
+          <div class="pin" style="background: var(--av-1)"></div>
+          <div class="pin" style="background: var(--av-2)"></div>
+        </div>
+        <div id="s1-copy">
+          <h1 id="s1-headline">A map full of pins answers nothing.</h1>
+        </div>
+        <div id="s1-rule"></div>
+      </section>
+
+      <!-- ══ Scene 2 — Join in seconds ══ 3.27 → 6.56 ═════════════════════ -->
+      <section id="s2" class="clip" data-start="3.27" data-duration="3.29" data-track-index="0">
+        <div id="s2-card">
+          <div id="s2-eyebrow-wrap">
+            <div id="s2-eyebrow-a" class="eyebrow">Trip code · tap to copy link</div>
+            <div id="s2-eyebrow-b" class="eyebrow" style="opacity: 0">Link copied</div>
+          </div>
+          <!-- Six characters from the ambiguity-free alphabet: no 0/O/1/I. -->
+          <div id="s2-code" class="tnum">K7RQ4M</div>
+        </div>
+        <div id="s2-line">Join in seconds. No app to install.</div>
+        <div id="s2-joined" class="eyebrow">Joined</div>
+        <div id="s2-avatars">
+          <div class="av s2-av" style="background: var(--av-0)">K</div>
+          <div class="av s2-av" style="background: var(--av-1)">A</div>
+          <div class="av s2-av" style="background: var(--av-2)">Y</div>
+          <div class="av s2-av" style="background: var(--av-4)">N</div>
+        </div>
+      </section>
+
+      <!-- ══ Scene 3 — The verdict ══ 6.56 → 10.93 ════════════════════════ -->
+      <section id="s3" class="clip" data-start="6.56" data-duration="4.37" data-track-index="0">
+        <div id="s3-block">
+          <div id="s3-eyebrow" class="eyebrow">Heads up</div>
+          <h2 id="s3-headline">Ama is 1.4 km back</h2>
+          <div id="s3-metric">
+            <span id="s3-metric-num" class="tnum">1.4</span>
+            <span id="s3-metric-label">KM BEHIND THE GROUP</span>
+          </div>
+          <div id="s3-caption">The whole group, in one sentence.</div>
+        </div>
+      </section>
+
+      <!-- ══ Scene 4 — The horizon ══ 10.93 → 15.88 (tail is the dissolve) ═ -->
+      <section id="s4" class="clip" data-start="10.93" data-duration="4.95" data-track-index="0">
+        <div id="s4-rule"><div id="s4-rule-fill"></div></div>
+        <div id="s4-flag">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M5 3v18M5 4h11l-2.2 3.5L16 11H5"
+              stroke="#0B6B3A"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </div>
+
+        <div class="rider" id="r-ama" style="left: 461px">
+          <div class="av" style="background: var(--av-1)">A</div>
+          <div class="badge" style="background: var(--behind)">&#8249;&#8249;</div>
+        </div>
+        <div class="rider" id="r-yaw" style="left: 919px">
+          <div class="av" style="background: var(--av-2)">Y</div>
+          <div class="badge" style="background: var(--withg)">&#8756;</div>
+        </div>
+        <div class="rider" id="r-kofi" style="left: 1226px">
+          <div class="av" style="background: var(--av-0)">K</div>
+          <div class="badge" style="background: var(--ahead)">&#8250;&#8250;</div>
+        </div>
+        <div class="rider" id="r-nana" style="left: 1473px">
+          <div class="av" style="background: var(--av-4)">N</div>
+          <div class="badge" style="background: var(--arrived)">&#10003;</div>
+        </div>
+
+        <div class="dist" id="d-ama" style="left: 425px">2.1</div>
+        <div class="dist" id="d-yaw" style="left: 883px">1.2</div>
+        <div class="dist" id="d-kofi" style="left: 1190px">0.6</div>
+        <div class="dist" id="d-nana" style="left: 1437px">here</div>
+
+        <div class="endlabel" id="s4-start">START</div>
+        <div class="endlabel" id="s4-dest">AKOSOMBO</div>
+
+        <div id="s4-legend">
+          <div class="legend-item">
+            <span class="legend-glyph" style="background: var(--behind)">&#8249;&#8249;</span>
+            <span class="legend-label" style="color: var(--behind)">Behind</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-glyph" style="background: var(--withg)">&#8756;</span>
+            <span class="legend-label" style="color: var(--withg)">With group</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-glyph" style="background: var(--ahead)">&#8250;&#8250;</span>
+            <span class="legend-label" style="color: var(--ahead)">Ahead</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-glyph" style="background: var(--arrived)">&#10003;</span>
+            <span class="legend-label" style="color: var(--arrived)">Arrived</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Scene 5 — Then it forgets ══ 15.29 → 19.66 ═══════════════════ -->
+      <section id="s5" class="clip" data-start="15.29" data-duration="4.37" data-track-index="1">
+        <div id="s5-block">
+          <h2 id="s5-headline">Then it forgets.</h2>
+          <div id="s5-mono">8 HOURS. THEN THE COORDINATES ARE GONE.</div>
+          <div id="s5-body">No position-history table. Nothing to keep.</div>
+        </div>
+      </section>
+
+      <!-- ══ Scene 6 — Radar ══ 19.66 → 22.50 ════════════════════════════ -->
+      <section id="s6" class="clip" data-start="19.66" data-duration="2.84" data-track-index="0">
+        <div id="s6-lockup">
+          <!-- The reduced mark: one range ring, you at the centre, one contact.
+               Same drawing as app/icon.svg and Radar.tsx's <Mark />. -->
+          <svg id="s6-mark" width="112" height="112" viewBox="0 0 64 64" aria-hidden="true">
+            <circle
+              id="s6-ring"
+              cx="32"
+              cy="32"
+              r="21"
+              fill="none"
+              stroke="#ECEAE4"
+              stroke-opacity="0.45"
+              stroke-width="6"
+            />
+            <circle id="s6-you" cx="32" cy="32" r="9.5" fill="#5BD18A" />
+            <circle id="s6-contact" cx="47.5" cy="16.5" r="7.5" fill="#7FADFF" />
+          </svg>
+          <div id="s6-word">Radar</div>
+        </div>
+        <div id="s6-line">Know where everyone is. Without the calls.</div>
+      </section>
+
+      <!-- ══ Audio ════════════════════════════════════════════════════════
+           Music on track 10, SFX from 11 up, one index each so nothing
+           overlaps on a lane. Volume policy: bed 0.30 (0.12 while ducked
+           under the erasure scene), accents 0.34–0.68. Polished restraint:
+           six motion-matched cues, and silence under the final logo hold. -->
+      <audio
+        id="music"
+        src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3"
+        data-start="0"
+        data-duration="22.5"
+        data-track-index="10"
+        data-volume="1"
+        data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0},{"t":0.4,"v":0.3},{"t":15.05,"v":0.3},{"t":15.6,"v":0.12},{"t":21.3,"v":0.12},{"t":22.5,"v":0}]}]}'
+      ></audio>
+
+      <!-- S1 — the last pin meets the rule -->
+      <audio id="sfx-settle" src="assets/sfx/impact/impactSoft_medium_000.ogg" data-start="2.45" data-track-index="11" data-volume="0.5"></audio>
+      <!-- S2 — tap to copy, then four people arriving off the link -->
+      <audio id="sfx-tap" src="assets/sfx/click2.ogg" data-start="4.27" data-track-index="12" data-volume="0.6"></audio>
+      <audio id="sfx-join-1" src="assets/sfx/interface/drop_002.ogg" data-start="4.72" data-track-index="13" data-volume="0.42"></audio>
+      <audio id="sfx-join-2" src="assets/sfx/interface/drop_002.ogg" data-start="5.05" data-track-index="14" data-volume="0.42"></audio>
+      <audio id="sfx-join-3" src="assets/sfx/interface/drop_002.ogg" data-start="5.38" data-track-index="15" data-volume="0.42"></audio>
+      <audio id="sfx-join-4" src="assets/sfx/interface/drop_002.ogg" data-start="5.71" data-track-index="16" data-volume="0.42"></audio>
+      <!-- S3 — the verdict lands. The single biggest cue in the video. -->
+      <audio id="sfx-verdict" src="assets/sfx/impact/impactSoft_medium_001.ogg" data-start="6.84" data-track-index="17" data-volume="0.68"></audio>
+      <!-- S4 — four riders placed along the horizon; same sound each time -->
+      <audio id="sfx-rider-1" src="assets/sfx/interface/drop_001.ogg" data-start="11.46" data-track-index="18" data-volume="0.55"></audio>
+      <audio id="sfx-rider-2" src="assets/sfx/interface/drop_001.ogg" data-start="12.02" data-track-index="19" data-volume="0.55"></audio>
+      <audio id="sfx-rider-3" src="assets/sfx/interface/drop_001.ogg" data-start="12.55" data-track-index="20" data-volume="0.55"></audio>
+      <audio id="sfx-rider-4" src="assets/sfx/interface/drop_001.ogg" data-start="13.11" data-track-index="21" data-volume="0.55"></audio>
+      <!-- S5 — the ground goes dark -->
+      <audio id="sfx-dark" src="assets/sfx/impact/impactSoft_medium_000.ogg" data-start="15.29" data-track-index="22" data-volume="0.34"></audio>
+      <!-- S6 — deliberately nothing. -->
+    </div>
+
+    <script>
+      // ── Pre-calculated layout constants ───────────────────────────────
+      // Nothing is measured at tween time: the renderer samples frames in
+      // parallel, so every coordinate is computed once, here.
+      var PIN = 26,
+        H = PIN / 2;
+
+      // Scene 1: nine pins scattered where a map would put them, then
+      // collapsed onto one rule. Centres, converted to top-left offsets.
+      var SCATTER = [
+        [330, 212], [604, 148], [878, 258], [1178, 176], [1452, 238],
+        [1656, 162], [452, 400], [1002, 428], [1518, 404],
+      ];
+      var RULE_Y = 861;
+      var COLLAPSE_X = [300, 465, 630, 795, 960, 1125, 1290, 1455, 1620];
+
+      // Scene 4: x positions come straight from Horizon's own formula in
+      // Radar.tsx — pct = clamp(4, 88, (1 - kmLeft / total) * 92) — with
+      // total = 2.6 km, mapped onto the 240..1680 rule.
+      var RIDERS = ["#r-ama", "#r-yaw", "#r-kofi", "#r-nana"];
+      var DISTS = ["#d-ama", "#d-yaw", "#d-kofi", "#d-nana"];
+      var RIDER_IN = [11.46, 12.02, 12.55, 13.11]; // beat-grid
+
+      var AUDIO = window.__RADAR_AUDIO;
+
+      function build() {
+        var tl = gsap.timeline({ paused: true });
+        var pins = gsap.utils.toArray("#s1-pins .pin");
+
+        /* ═══ Scene 1 — A map full of pins ═══ 0.00 → 3.27 ═══════════════
+           Open on the thing the viewer already has: nine unreadable pins.
+           Name it, then break it — the pins fall onto a single rule, which
+           is Radar's horizon strip and the spine of the next two scenes. */
+        pins.forEach(function (p, i) {
+          tl.fromTo(
+            p,
+            { x: SCATTER[i][0] - H, y: SCATTER[i][1] - H, opacity: 0, scale: 0.4 },
+            {
+              x: SCATTER[i][0] - H,
+              y: SCATTER[i][1] - H,
+              opacity: 1,
+              scale: 1,
+              duration: 0.42,
+              ease: "power2.out",
+            },
+            0.05 + i * 0.05
+          );
+        });
+
+        // Fast in, long hold — 2.27s settled on a seven-word line.
+        tl.fromTo(
+          "#s1-headline",
+          { y: 40, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" },
+          0.55
+        );
+
+        tl.fromTo("#s1-rule", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power2.inOut" }, 1.55);
+
+        pins.forEach(function (p, i) {
+          tl.to(
+            p,
+            {
+              x: COLLAPSE_X[i] - H,
+              y: RULE_Y - H,
+              scale: 0.62,
+              duration: 0.55,
+              ease: "power2.inOut",
+            },
+            1.7 + i * 0.045
+          );
+        });
+
+        /* ═══ Scene 2 — Join in seconds ═══ 3.27 → 6.56 ══════════════════
+           The real Share screen: the code is the hero, tap-to-copy is
+           simulated, and four people arrive off the link. */
+        tl.fromTo("#s2-card", { y: 44, opacity: 0 }, { y: 0, opacity: 1, duration: 0.46, ease: "power3.out" }, 3.32);
+        tl.fromTo("#s2-code", { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.42, ease: "power3.out" }, 3.46);
+        tl.fromTo("#s2-line", { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" }, 3.72);
+
+        // The tap: the card presses, and the eyebrow flips to LINK COPIED.
+        tl.to("#s2-card", { scale: 0.985, duration: 0.11, ease: "power2.out" }, 4.27)
+          .to("#s2-card", { scale: 1, duration: 0.16, ease: "power2.inOut" }, 4.38);
+        tl.to("#s2-eyebrow-a", { opacity: 0, duration: 0.18, ease: "none" }, 4.35);
+        tl.to("#s2-eyebrow-b", { opacity: 1, duration: 0.18, ease: "none" }, 4.35);
+
+        tl.fromTo("#s2-joined", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "none" }, 4.57);
+        gsap.utils.toArray(".s2-av").forEach(function (a, i) {
+          tl.fromTo(
+            a,
+            { y: 20, opacity: 0, scale: 0.8 },
+            { y: 0, opacity: 1, scale: 1, duration: 0.34, ease: "power3.out" },
+            4.72 + i * 0.33
+          );
+        });
+
+        /* ═══ Scene 3 — The verdict ═══ 6.56 → 10.93 ═════════════════════
+           The hero frame: the whole group reduced to one sentence and one
+           number, exactly as VerdictBlock renders it. Cuts out on the
+           10.93s strong cue.  // beat-locked: 10.93s */
+        tl.fromTo("#s3-eyebrow", { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, 6.66);
+        tl.fromTo("#s3-headline", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.44, ease: "power3.out" }, 6.86);
+        tl.fromTo("#s3-metric", { y: 26, opacity: 0 }, { y: 0, opacity: 1, duration: 0.38, ease: "power3.out" }, 7.34);
+        tl.fromTo("#s3-caption", { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" }, 8.55);
+
+        /* ═══ Scene 4 — The horizon ═══ 10.93 → 15.88 ════════════════════
+           Opens on the 10.93s strong cue.  // beat-locked: 10.93s
+           Riders land on consecutive beats; their text labels deliberately
+           do NOT — 0.55s spacing outruns reading, so the four status labels
+           arrive as one set and hold. */
+        tl.fromTo("#s4-rule", { scaleX: 0 }, { scaleX: 1, duration: 0.42, ease: "power2.inOut" }, 10.93);
+        tl.fromTo("#s4-flag", { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.32, ease: "power3.out" }, 11.18);
+        tl.fromTo("#s4-start", { opacity: 0 }, { opacity: 1, duration: 0.34, ease: "none" }, 11.08);
+        tl.fromTo("#s4-dest", { opacity: 0 }, { opacity: 1, duration: 0.34, ease: "none" }, 11.08);
+
+        RIDERS.forEach(function (sel, i) {
+          // beat-grid: 11.46, 12.02, 12.55, 13.11
+          tl.fromTo(
+            sel,
+            { y: -48, opacity: 0, scale: 0.86 },
+            { y: 0, opacity: 1, scale: 1, duration: 0.4, ease: "power3.out" },
+            RIDER_IN[i]
+          );
+          tl.fromTo(DISTS[i], { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "none" }, RIDER_IN[i] + 0.12);
+        });
+
+        // The readable set, held 1.43s.
+        tl.fromTo("#s4-legend", { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.22, ease: "power2.out" }, 13.64);
+
+        /* ═══ The dissolve ═══ 15.29 → 15.80 ═════════════════════════════
+           The board empties right to left and the ground crossfades to the
+           app's real dark theme. Everything is clear before Scene 5 speaks. */
+        tl.to("#bg-dark", { opacity: 1, duration: 0.53, ease: "power2.inOut" }, 15.29);
+        tl.to("#s4-legend", { opacity: 0, duration: 0.3, ease: "none" }, 15.29);
+        [3, 2, 1, 0].forEach(function (i, k) {
+          tl.to(RIDERS[i], { y: -18, opacity: 0, duration: 0.28, ease: "power2.in" }, 15.29 + k * 0.08);
+          tl.to(DISTS[i], { opacity: 0, duration: 0.24, ease: "none" }, 15.29 + k * 0.08);
+        });
+        tl.to("#s4-start", { opacity: 0, duration: 0.3, ease: "none" }, 15.33);
+        tl.to("#s4-dest", { opacity: 0, duration: 0.3, ease: "none" }, 15.33);
+        tl.to("#s4-flag", { scale: 0.4, opacity: 0, duration: 0.28, ease: "power2.in" }, 15.4);
+        tl.to("#s4-rule", { scaleX: 0, duration: 0.38, ease: "power2.inOut" }, 15.36);
+
+        /* ═══ Scene 5 — Then it forgets ═══ 15.29 → 19.66 ════════════════
+           The claim nobody else makes, on an empty dark frame. The body
+           line lands on the 17.47s strong cue.  // beat-locked: 17.47s */
+        tl.fromTo("#s5-headline", { y: 38, opacity: 0 }, { y: 0, opacity: 1, duration: 0.48, ease: "power3.out" }, 15.86);
+        tl.fromTo("#s5-mono", { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.32, ease: "power3.out" }, 16.93);
+        tl.fromTo("#s5-body", { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.32, ease: "power3.out" }, 17.47);
+
+        /* ═══ Scene 6 — Radar ═══ 19.66 → 22.50 ══════════════════════════
+           The mark draws on the 19.66s strong cue.  // beat-locked: 19.66s
+           No logo hit: silence under the final hold is the choice. */
+        var C = 2 * Math.PI * 21;
+        tl.fromTo(
+          "#s6-ring",
+          { strokeDasharray: C, strokeDashoffset: C },
+          { strokeDashoffset: 0, duration: 0.52, ease: "power2.inOut" },
+          19.66
+        );
+        tl.fromTo("#s6-you", { attr: { r: 0 } }, { attr: { r: 9.5 }, duration: 0.28, ease: "power3.out" }, 19.88);
+        tl.fromTo("#s6-contact", { attr: { r: 0 } }, { attr: { r: 7.5 }, duration: 0.28, ease: "power3.out" }, 20.0);
+        tl.fromTo("#s6-word", { x: -24, opacity: 0 }, { x: 0, opacity: 1, duration: 0.38, ease: "power3.out" }, 19.84);
+        tl.fromTo("#s6-line", { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 0.38, ease: "power3.out" }, 19.98);
+
+        /* ═══ Audio-reactive ═══════════════════════════════════════════════
+           Pre-extracted per-frame bands (no runtime analysis, no Web Audio).
+           Deliberately barely perceptible: the verdict's number gains 3% of
+           presence on bass, and the horizon rule breathes 14% of opacity on
+           overall level. No bars, no visualiser — the music moves what is
+           already on screen. */
+        if (AUDIO) {
+          var num = document.getElementById("s3-metric-num");
+          var fill = document.getElementById("s4-rule-fill");
+          var lastFrame = Math.min(AUDIO.totalFrames, Math.floor(22.5 * AUDIO.fps));
+          for (var f = 0; f < lastFrame; f++) {
+            tl.call(
+              (function (bass, rms) {
+                return function () {
+                  gsap.set(num, { scale: 1 + bass * 0.03 });
+                  gsap.set(fill, { opacity: 0.86 + rms * 0.14 });
+                };
+              })(AUDIO.bass[f], AUDIO.rms[f]),
+              [],
+              f / AUDIO.fps
+            );
+          }
+        }
+
+        window.__timelines["main"] = tl;
+        if (typeof window.__hfForceTimelineRebind === "function") {
+          window.__hfForceTimelineRebind();
+        }
+      }
+
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(build);
+      } else {
+        build();
+      }
+    </script>
+  </body>
+</html>
