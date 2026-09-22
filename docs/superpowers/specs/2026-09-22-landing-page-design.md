@@ -115,7 +115,7 @@ export const CONVOY_TICKS: number;          // length of the script
 export const VIEWER_ID: string;             // deliberately NOT one of the riders — see below
 
 /** The convoy's positions at `tick`, clamped into range. */
-export function convoyAt(tick: number): Participant[];
+export function convoyAt(tick: number, now: number): Participant[];
 ```
 
 Four riders — **Ama, Kofi, Yaw, Esi** — interpolated along a polyline of hardcoded coordinate pairs in the module itself. No network, no geocoding, no map: the demo needs distances that behave, not a route that exists.
@@ -128,7 +128,9 @@ The script is written so the engine passes through, in order:
 2. `ALL GOOD` / *All together* — she closes up, everyone inside the cluster radius, metric `KM TO AKOSOMBO`
 3. `ARRIVED` / *Kofi has arrived* — Kofi crosses the 100 m arrival radius
 
-The consumer owns the clock: a component holds `tick` in state and advances it. `convoyAt` never reads `Date.now()`, which is what makes it testable and what keeps the render deterministic.
+The consumer owns the clock: a component holds `tick` in state and advances it, and passes `now` in. `convoyAt` never reads `Date.now()` itself, which is what makes it testable and what keeps the render deterministic.
+
+Everything under `lib/` imports **relatively** (`../geo`, `../../status`), never through the `@/` alias: `vitest.config.ts` declares no alias, so an `@/` import in a module a test pulls in resolves under Next and fails under the test runner. Components under `app/` may keep `@/lib/...` — they are `.tsx` and are never collected.
 
 `lastMovedAt` is set per rider per tick so `stopped` never fires accidentally mid-script; `now` is passed into `computeStatuses`/`computeVerdict` from the same component, so every value on one paint agrees — the convention `HomeDashboard` already follows.
 
@@ -288,7 +290,8 @@ Content column 1200px, full-bleed bands to 1440px, 24px gutters. Single column b
 Everything is transform/opacity only, and the global `prefers-reduced-motion` block in `globals.css` already reduces every duration to 0.001ms.
 
 - The sweep is the existing `.gt-sweep` (5s linear, compositor-only).
-- Hero contacts arrive on a stagger; section entrances reuse the existing `.gt-rise`, triggered by an `IntersectionObserver`.
+- Hero contacts arrive on a stagger.
+- **No scroll-triggered section entrances.** Reusing `.gt-rise` on an `IntersectionObserver` would make the entire static half of the page a client component in order to fade in headings. The motion budget is spent on the two things that carry meaning — the sweep and the running verdict — and `Sections.tsx` stays a server component.
 - **The convoy pauses when off-screen.** A `setInterval` ticking a demo nobody is looking at is a battery cost on a phone, and this page is mostly read on phones.
 - **Under reduced motion the convoy freezes on a representative frame** rather than inheriting the global 0.001ms override, which would otherwise flicker the whole script past in an instant. This is an explicit `matchMedia` check, not a CSS consequence.
 - Nothing scroll-scrubbed, nothing parallax, no scroll hijacking.
