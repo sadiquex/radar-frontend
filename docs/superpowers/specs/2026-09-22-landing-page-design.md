@@ -112,18 +112,20 @@ Pure, deterministic, no React, no clock of its own.
 /** A four-person ride to Akosombo, scripted so the verdict earns each state. */
 export const CONVOY_DESTINATION: { name: string; lat: number; lng: number };
 export const CONVOY_TICKS: number;          // length of the script
-export const SELF_ID: string;
+export const VIEWER_ID: string;             // deliberately NOT one of the riders — see below
 
 /** The convoy's positions at `tick`, clamped into range. */
 export function convoyAt(tick: number): Participant[];
 ```
 
-Four riders — **you, Ama, Kofi, Yaw** — interpolated along a polyline of hardcoded coordinate pairs in the module itself. No network, no geocoding, no map: the demo needs distances that behave, not a route that exists. Ghanaian names and a Ghanaian destination, consistent with the launch video (`Ama is 1.4 km back`) and the repairs fixtures (Osu); a landing page demoing a convoy through San Francisco would be a lie about who this is for.
+Four riders — **Ama, Kofi, Yaw, Esi** — interpolated along a polyline of hardcoded coordinate pairs in the module itself. No network, no geocoding, no map: the demo needs distances that behave, not a route that exists.
+
+**`VIEWER_ID` is not one of the four, deliberately.** `computeVerdict` picks its metric anchor from whether the viewer is located: `useGroupReference = !selfLocated || ...`, and with a located self it measures the subject against *you* and labels the metric `KM BEHIND YOU`. A page visitor is not in this convoy, so an unlisted viewer id is both the honest framing and the one that produces `1.4 / KM BEHIND THE GROUP` — the reading the launch video and §6 use. It also keeps a fictional "You" row out of the roster, and means `isSelf` is never true, so no branch can emit "You have fallen behind" at a stranger. Ghanaian names and a Ghanaian destination, consistent with the launch video (`Ama is 1.4 km back`) and the repairs fixtures (Osu); a landing page demoing a convoy through San Francisco would be a lie about who this is for.
 
 The script is written so the engine passes through, in order:
 
 1. `HEADS UP` / *Ama is 1.4 km back* — Ama drifts past the 150 m margin
-2. `ALL GOOD` / *Everyone's together* — she closes up, everyone inside the cluster radius
+2. `ALL GOOD` / *All together* — she closes up, everyone inside the cluster radius, metric `KM TO AKOSOMBO`
 3. `ARRIVED` / *Kofi has arrived* — Kofi crosses the 100 m arrival radius
 
 The consumer owns the clock: a component holds `tick` in state and advances it. `convoyAt` never reads `Date.now()`, which is what makes it testable and what keeps the render deterministic.
@@ -170,7 +172,7 @@ The crossing to cream is a clean cut on a 1px `--c-arrived` rule — a horizon l
 - Eyebrow `THE WHOLE GROUP, IN ONE LINE`
 - H2 "A map shows you dots. Radar tells you what they mean."
 - Body: "Everyone's position reduced to one sentence and one number, because a rider at effort reads one field, not eight. This is the engine running, not a recording."
-- The card: verdict block at marketing scale (eyebrow · headline · metric + metric label), the horizon strip beneath it (`START ──●──●────● AKOSOMBO`), then four roster rows — avatar, name, glyph, status word, distance.
+- The card: verdict block at marketing scale (eyebrow · headline · metric + metric label), the horizon strip beneath it (`START ──●──●────● AKOSOMBO`), then four roster rows — avatar, name, glyph, status word, distance. No "You" row; the viewer is watching the group, not in it (§5.2).
 
 **§2 The five statuses.** Read from `STATUS[]` so the labels and colours cannot drift from the app.
 
